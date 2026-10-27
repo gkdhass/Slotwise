@@ -4,11 +4,38 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo \"web dev not yet scaffolded (M0)\" && exit 0",
-    "build": "echo \"web build not yet scaffolded (M0)\" && exit 0",
-    "lint": "echo \"web lint not yet scaffolded (M0)\" && exit 0",
-    "typecheck": "echo \"web typecheck not yet scaffolded (M0)\" && exit 0",
-    "test": "echo \"web tests not yet scaffolded (M0)\" && exit 0",
-    "test:unit": "echo \"web unit tests not yet scaffolded (M0)\" && exit 0"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "globals": "^15.12.0",
+    "typescript-eslint": "^8.18.0",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
   }
 }
