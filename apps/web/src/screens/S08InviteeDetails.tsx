@@ -58,6 +58,9 @@ export default function S08InviteeDetails() {
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
         <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
         <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <p className="text-caption text-text-muted">
+          By confirming, you agree to the host's cancellation policy shown on the event page.
+        </p>
         <Button type="submit" loading={submitting}>
           {submitting ? "Confirming your appointment…" : "Confirm booking"}
         </Button>

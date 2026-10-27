@@ -37,6 +37,9 @@ export default function S05PreviewPublish() {
           </div>
           {ev.description && <p className="mt-2 text-small text-text-muted">{ev.description}</p>}
         </div>
+        <div className="rounded-md border border-border bg-bg p-3 text-small text-text-muted">
+          Policy preview: invitees can cancel or reschedule using the secure link in their confirmation email.
+        </div>
         <div className="flex gap-2">
           <Button onClick={handlePublish} disabled={ev.isPublished}>
             {ev.isPublished ? "Published" : "Publish booking page"}
