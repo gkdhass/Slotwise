@@ -22,13 +22,13 @@ describe("App routes (M0)", () => {
     expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
   });
 
-  it("renders a public event route", () => {
+  it("renders a public event route", async () => {
     render(
-      <MemoryRouter initialEntries={["/book/demo"]}>
+      <MemoryRouter initialEntries={["/book/intro-tutoring"]}>
         <App />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: /tutoring session/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /intro tutoring/i })).toBeInTheDocument();
   });
 
   it("renders every M0 route without crashing", () => {
@@ -41,9 +41,9 @@ describe("App routes (M0)", () => {
       "/app/events/1/availability",
       "/app/events/1/preview",
       "/app/bookings",
-      "/book/demo",
-      "/book/demo/slots",
-      "/book/demo/details",
+      "/book/intro-tutoring",
+      "/book/intro-tutoring/slots",
+      "/book/intro-tutoring/details",
       "/booking/confirmed/ref-1",
       "/manage/token-1",
     ];
