@@ -39,6 +39,8 @@ Format: ID | Decision | Reason / source | Date | Status.
 | DEV-01 | Atomic booking transaction + exclusion constraint + idempotency moved from M5 to M2 (originally M5 per master prompt §10). | Gate 1 approval (2026-10-27): implement `bookings_no_host_overlap` and full booking transaction now, with concurrency tests in `tests/concurrency`. |
 | DEV-02 | Slot-generation and time-zone logic moved from `apps/web` mock into `packages/shared` as pure, unit-tested functions. | Gate 1 approval: both API and web import from shared; mockApi retained only for unit tests. |
 | DEV-03 | Playwright + axe added in M2 (originally M6). | Gate 1 approval: smoke test of core loop + axe on S06–S09 now. |
+| DEV-04 | Web screens still consume mockApi (localStorage) in M2; real API client implemented in `apps/web/src/lib/api.ts` but screen wiring deferred. | Backend + tests prioritized; mechanical swap (same signatures) deferred to M3/M4. mockApi retained for unit tests. |
+| DEV-05 | Dev database is local PostgreSQL 18 (not Neon) because `.env` was not populated; CI uses PostgreSQL 16 service container. | User can switch to Neon by updating `DATABASE_URL`; migration SQL is provider-agnostic. |
 
 ## C. Assumptions recorded (master prompt rule 6)
 
