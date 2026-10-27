@@ -1,0 +1,17 @@
+{
+  "name": "@slotwise/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"api dev not yet scaffolded (M0)\" && exit 0",
+    "build": "echo \"api build not yet scaffolded (M0)\" && exit 0",
+    "lint": "echo \"api lint not yet scaffolded (M0)\" && exit 0",
+    "typecheck": "echo \"api typecheck not yet scaffolded (M0)\" && exit 0",
+    "test": "echo \"api tests not yet scaffolded (M0)\" && exit 0",
+    "test:unit": "echo \"api unit tests not yet scaffolded (M0)\" && exit 0",
+    "test:integration": "echo \"api integration tests not yet scaffolded (M0)\" && exit 0",
+    "prisma:migrate": "echo \"prisma not yet configured (M2)\" && exit 0",
+    "worker:email": "echo \"worker not yet scaffolded (M5)\" && exit 0"
+  }
+}

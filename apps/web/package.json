@@ -1,0 +1,14 @@
+{
+  "name": "@slotwise/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"web dev not yet scaffolded (M0)\" && exit 0",
+    "build": "echo \"web build not yet scaffolded (M0)\" && exit 0",
+    "lint": "echo \"web lint not yet scaffolded (M0)\" && exit 0",
+    "typecheck": "echo \"web typecheck not yet scaffolded (M0)\" && exit 0",
+    "test": "echo \"web tests not yet scaffolded (M0)\" && exit 0",
+    "test:unit": "echo \"web unit tests not yet scaffolded (M0)\" && exit 0"
+  }
+}
