@@ -6,9 +6,21 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "lint": "echo \"shared lint not yet scaffolded (M0)\" && exit 0",
-    "typecheck": "echo \"shared typecheck not yet scaffolded (M0)\" && exit 0",
-    "test": "echo \"shared tests not yet scaffolded (M0)\" && exit 0",
-    "test:unit": "echo \"shared unit tests not yet scaffolded (M0)\" && exit 0"
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.8",
+    "zod": "^3.23.8"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
   }
 }

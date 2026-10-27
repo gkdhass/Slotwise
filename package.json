@@ -18,6 +18,7 @@
     "test:unit": "pnpm --filter @slotwise/api test:unit && pnpm --filter @slotwise/web test:unit",
     "test:integration": "pnpm --filter @slotwise/api test:integration",
     "test:e2e": "pnpm --filter @slotwise/e2e test",
+    "test:concurrency": "pnpm --filter @slotwise/api test:concurrency",
     "db:migrate": "pnpm --filter @slotwise/api prisma:migrate",
     "worker:email": "pnpm --filter @slotwise/api worker:email"
   },

@@ -14,14 +14,15 @@ Phase 0 — analysis & setup. See `docs/PROGRESS.md`.
 ## Prerequisites
 - Node.js >= 20
 - pnpm 12.x (`npm i -g pnpm`)
-- PostgreSQL 16 (Docker optional: `docker compose up -d`)
+- PostgreSQL 16 (Docker optional: `docker compose up -d`; or a Neon dev branch / native install)
 
 ## Setup (target < 10 min)
-1. `cp .env.example .env` and fill values.
+1. `cp .env.example .env` and fill values. Use a **direct (non-pooled)** connection string for `DATABASE_URL` (Neon: the "direct" string, not the `-pooler` one) so migrations and the worker behave correctly.
 2. `pnpm install`
 3. `docker compose up -d` (or point `DATABASE_URL` at a Postgres instance)
-4. `pnpm db:migrate`
-5. `pnpm dev`
+4. Verify extensions: `CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS btree_gist;`
+5. `pnpm db:migrate`
+6. `pnpm dev`
 
 ## Scripts
 - `pnpm dev` — run web + api

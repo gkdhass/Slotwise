@@ -6,13 +6,13 @@ Format: ID | Decision | Reason / source | Date | Status.
 
 | ID | Decision | Reason | Date | Status |
 |---|---|---|---|---|
-| D-01 | Database = PostgreSQL (Neon/Supabase for hosting; local dev via Docker). Do NOT use MongoDB. | No-double-booking guarantee needs GiST exclusion constraint; MongoDB cannot provide it. | 2026-10-27 | **Pending owner confirmation at Gate 0** |
+| D-01 | Database = PostgreSQL (Neon/Supabase for hosting; local dev via Neon dev branch or native PG16). Do NOT use MongoDB. | No-double-booking guarantee needs GiST exclusion constraint; MongoDB cannot provide it. Confirmed at Gate 0: PostgreSQL only; no MongoDB/SQLite/in-memory substitutes for integration or concurrency tests. | 2026-10-27 | **Confirmed at Gate 0** |
 | D-02 | ORM = Prisma for CRUD/migrations + raw SQL migrations for extensions and the exclusion constraint; booking transaction may use `$queryRaw`/`$transaction`. | Prisma cannot express EXCLUDE constraints natively. | 2026-10-27 | Accepted |
 | D-03 | Language = TypeScript on frontend and backend. | Maintainability; shared types. | 2026-10-27 | Accepted |
 | D-04 | Frontend = React + Vite + Tailwind CSS. Backend = Node.js + Express (modular monolith). Validation = Zod. | PRD/TRD. | 2026-10-27 | Accepted |
 | D-05 | Auth = server-side sessions, HTTP-only cookie, session token stored hashed, Argon2id passwords, CSRF protection. | TRD §7. | 2026-10-27 | Accepted |
 | D-06 | Email = Resend (or Nodemailer + Ethereal/Mailpit in dev). Emails only sent by outbox worker after commit. | TRD §2, PRD FR-07. | 2026-10-27 | Accepted |
-| D-07 | Hosting = Vercel for frontend. API: prefer Vercel serverless functions only if outbox driven by Vercel Cron/HTTP-triggered worker route; otherwise Render/Railway. Verify current Vercel limits before choosing. | TRD §12 says confirm limits. | 2026-10-27 | **Pending owner confirmation at Gate 0** |
+| D-07 | Hosting = Vercel for frontend only. API + outbox worker on a long-running Node host (Render or Railway), NOT Vercel serverless. Reason: SKIP LOCKED polling, stable DB connections, and Prisma connection handling. Worker must be runnable as (a) a separate process and (b) a secret-protected HTTP route, so the hosting choice stays reversible. | Decided at Gate 0 (2026-10-27). Vercel serverless rejected for the API due to connection/worker constraints. | 2026-10-27 | **Decided at Gate 0** |
 | D-08 | Payments, Google/Microsoft calendar, reminders = out of scope (feature-flagged off, not built). | PRD "could/defer". | 2026-10-27 | Accepted |
 | D-09 | Currency symbol in PRD pricing table unreadable (rendered ■); assume ₹ (INR). Pricing is a hypothesis shown only in docs, not implemented. | Ambiguity. | 2026-10-27 | Accepted |
 | D-10 | IEEE paper is NOT about scheduling. Incorporated only as optional, advisory "Booking Abuse Detection" research module (Phase 11), built after core is shippable. | Paper domain (threat detection via deep transfer learning) does not match Slotwise docs. | 2026-10-27 | Accepted (optional, gated) |
