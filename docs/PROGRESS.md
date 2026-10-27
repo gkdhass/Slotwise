@@ -3,13 +3,14 @@
 Last updated: 2026-10-27 (Phase 0).
 
 ## Current milestone
-Phase 0 — Analysis & setup. Status: in progress (Gate 0 pending owner confirmation of D-01 and D-07).
+M0 Shell — complete on branch `m0-shell`. Gate 1 pending (after M1).
 
 ## Milestones
 | Milestone | Status | Notes |
 |---|---|---|
-| Phase 0 — Analysis & setup | In progress | Docs written; repo scaffolded; Gate 0 pending |
-| M0 Shell | Not started | Blocked on Gate 0 |
+| Phase 0 — Analysis & setup | Complete | Gate 0 approved (D-01 PostgreSQL, D-07 Render/Railway) |
+| M0 Shell | Complete | Routes S01–S11, tokens, primitives, mock data, real lint/typecheck/tests |
+| M1 Vertical slice (mock) | In progress | Next |
 | M1 Vertical slice (mock) | Not started | |
 | M2 Must-haves (persistent) | Not started | |
 | M3 Should-haves | Not started | |
