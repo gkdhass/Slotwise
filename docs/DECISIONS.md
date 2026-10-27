@@ -32,6 +32,14 @@ Format: ID | Decision | Reason / source | Date | Status.
 | C-09 | Paper internally inconsistent (image datasets vs network traffic text; numbers) | Do not reuse paper's numbers; report own measured values |
 | C-10 | updated_at maintenance left to app or trigger | Use DB trigger in migrations |
 
+## B2. Deviations recorded during execution
+
+| ID | Deviation | Reason |
+|---|---|---|
+| DEV-01 | Atomic booking transaction + exclusion constraint + idempotency moved from M5 to M2 (originally M5 per master prompt §10). | Gate 1 approval (2026-10-27): implement `bookings_no_host_overlap` and full booking transaction now, with concurrency tests in `tests/concurrency`. |
+| DEV-02 | Slot-generation and time-zone logic moved from `apps/web` mock into `packages/shared` as pure, unit-tested functions. | Gate 1 approval: both API and web import from shared; mockApi retained only for unit tests. |
+| DEV-03 | Playwright + axe added in M2 (originally M6). | Gate 1 approval: smoke test of core loop + axe on S06–S09 now. |
+
 ## C. Assumptions recorded (master prompt rule 6)
 
 - A-01: Target persona = independent tutor (provisional guess; no verified user pain).

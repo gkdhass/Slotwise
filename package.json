@@ -4,7 +4,9 @@
   "private": true,
   "description": "Slotwise — focused single-host scheduling MVP (final-year project).",
   "packageManager": "pnpm@12.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -25,6 +27,8 @@
   "devDependencies": {
     "prettier": "^3.3.0",
     "eslint": "^9.0.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@playwright/test": "^1.49.0",
+    "@axe-core/playwright": "^4.10.0"
   }
 }
