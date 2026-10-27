@@ -4,14 +4,41 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo \"api dev not yet scaffolded (M0)\" && exit 0",
-    "build": "echo \"api build not yet scaffolded (M0)\" && exit 0",
-    "lint": "echo \"api lint not yet scaffolded (M0)\" && exit 0",
-    "typecheck": "echo \"api typecheck not yet scaffolded (M0)\" && exit 0",
-    "test": "echo \"api tests not yet scaffolded (M0)\" && exit 0",
-    "test:unit": "echo \"api unit tests not yet scaffolded (M0)\" && exit 0",
-    "test:integration": "echo \"api integration tests not yet scaffolded (M0)\" && exit 0",
-    "prisma:migrate": "echo \"prisma not yet configured (M2)\" && exit 0",
-    "worker:email": "echo \"worker not yet scaffolded (M5)\" && exit 0"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -b",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:concurrency": "vitest run --config vitest.concurrency.config.ts",
+    "worker:email": "tsx src/worker/emailWorker.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "zod": "^3.23.8",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.7",
+    "argon2": "^0.41.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/cors": "^2.8.17",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "typescript-eslint": "^8.18.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.8"
   }
 }
