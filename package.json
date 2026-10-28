@@ -4,7 +4,9 @@
   "private": true,
   "description": "Slotwise — focused single-host scheduling MVP (final-year project).",
   "packageManager": "pnpm@12.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -17,7 +19,7 @@
     "test": "pnpm -r test",
     "test:unit": "pnpm --filter @slotwise/api test:unit && pnpm --filter @slotwise/web test:unit",
     "test:integration": "pnpm --filter @slotwise/api test:integration",
-    "test:e2e": "pnpm --filter @slotwise/e2e test",
+    "test:e2e": "playwright test",
     "test:concurrency": "pnpm --filter @slotwise/api test:concurrency",
     "db:migrate": "pnpm --filter @slotwise/api prisma:migrate",
     "worker:email": "pnpm --filter @slotwise/api worker:email"
@@ -25,6 +27,8 @@
   "devDependencies": {
     "prettier": "^3.3.0",
     "eslint": "^9.0.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@playwright/test": "^1.49.0",
+    "@axe-core/playwright": "^4.10.0"
   }
 }

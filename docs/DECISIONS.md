@@ -32,6 +32,23 @@ Format: ID | Decision | Reason / source | Date | Status.
 | C-09 | Paper internally inconsistent (image datasets vs network traffic text; numbers) | Do not reuse paper's numbers; report own measured values |
 | C-10 | updated_at maintenance left to app or trigger | Use DB trigger in migrations |
 
+## B2. Deviations recorded during execution
+
+| ID | Deviation | Reason |
+|---|---|---|
+| DEV-01 | Atomic booking transaction + exclusion constraint + idempotency moved from M5 to M2 (originally M5 per master prompt §10). | Gate 1 approval (2026-10-27): implement `bookings_no_host_overlap` and full booking transaction now, with concurrency tests in `tests/concurrency`. |
+| DEV-02 | Slot-generation and time-zone logic moved from `apps/web` mock into `packages/shared` as pure, unit-tested functions. | Gate 1 approval: both API and web import from shared; mockApi retained only for unit tests. |
+| DEV-03 | Playwright + axe added in M2 (originally M6). | Gate 1 approval: smoke test of core loop + axe on S06–S09 now. |
+| DEV-04 | Web screens still consume mockApi (localStorage) in M2; real API client implemented in `apps/web/src/lib/api.ts` but screen wiring deferred. | Backend + tests prioritized; mechanical swap (same signatures) deferred to M3/M4. mockApi retained for unit tests. |
+| DEV-05 | Dev database is local PostgreSQL 18 (not Neon) because `.env` was not populated; CI uses PostgreSQL 16 service container. | User can switch to Neon by updating `DATABASE_URL`; migration SQL is provider-agnostic. |
+| DEV-06 | **Supersedes DEV-04.** All S01–S11 screens now call the real API client (`apps/web/src/lib/api.ts`); `mockApi` is no longer imported by any screen and survives only as a unit-test fixture. | M5 scope: "wire every screen to the real API". Verified by `apps/web/src/App.test.tsx` (mock of `./lib/api`, not `mockApi`). |
+| DEV-07 | CSRF protection applied to *all* state-changing auth routes (`register`, `verify-email`, `login`, `logout`, `password-reset/*`), plus a `GET /api/v1/auth/csrf` bootstrap endpoint the SPA calls before its first mutation. The public booking route deliberately keeps **no** CSRF (it carries no ambient authority). | Closes the login-CSRF gap found while writing the enforced-CSRF test suite. |
+| DEV-08 | Validation status split: schema/format failures → `400 VALIDATION_ERROR`; business-rule failures (unknown time zone, slot not on the availability grid, inverted/over-long window, overlapping availability) → `422 UNPROCESSABLE`. | Zod cannot express calendar/business rules; keeping the codes distinct lets the UI show "fix your input" vs "that time is no longer valid". |
+| DEV-09 | Idempotent booking replay returns `200` with the original reference, `managementToken: null` and `replayed: true`. | A replay must not hand out a second copy of a bearer-style token; the first token was already delivered by email. |
+| DEV-10 | Playwright starts two web servers (`web`, `api`) instead of `pnpm dev`, and Vite is pinned to `host: "127.0.0.1"`. | `pnpm --parallel`'s output multiplexer stalls when its stdout is a pipe (Playwright's spawn), so the stack never became ready; and Vite's default resolves `localhost` to `::1` on Windows, which the `127.0.0.1` readiness probe cannot reach. Debugged with `DEBUG=pw:webserver`. |
+| DEV-11 | E2E servers run with raised rate limits (`RATE_LIMIT_*`) via `webServer.env`. The real limits are still enforced and proven by `tests/security`. | 19 browser tests legitimately exceed a 10-per-15-min login bucket; the production limits remain untested-by-E2E but fully covered by the security suite. |
+| DEV-12 | `tests/e2e/.auth/owner.json` (Playwright storage state) is git-ignored. | It contains a live session cookie; committing it would leak a credential. |
+
 ## C. Assumptions recorded (master prompt rule 6)
 
 - A-01: Target persona = independent tutor (provisional guess; no verified user pain).
@@ -42,4 +59,4 @@ Format: ID | Decision | Reason / source | Date | Status.
 - A-06: Host/invitee example zones = Asia/Kolkata vs America/New_York for DST tests.
 - A-07: Phase 11 ML module starts only after Gate 3 passes AND owner says "start Phase 11".
 - A-08: pnpm (not npm) for workspaces; pnpm 12.15.0 installed locally. Docker not available locally → Postgres via native install or remote (Neon) for dev; docker-compose.yml still provided for environments with Docker.
-- A-09: Node.js v22.16.0; git 2.53.0.<|end|><|start|>write to=assistant<|channel|>analysis<|message|>Created file successfully: docs/DECISIONS.md
+- A-09: Node.js v22.16.0; git 2.53.0.
