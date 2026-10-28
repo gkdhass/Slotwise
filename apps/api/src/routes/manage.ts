@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import { hashToken } from "../lib/hash.js";
 import { now } from "../lib/clock.js";
+import { isIanaZone } from "../lib/timezone.js";
 import { generateSlots } from "@slotwise/shared";
 
 const router: Router = Router();
@@ -22,14 +23,7 @@ async function loadBooking(token: string) {
   return { mt, booking };
 }
 
-function isIanaZone(tz: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-}
+
 
 router.get("/:token", async (req, res, next) => {
   try {
@@ -88,9 +82,19 @@ router.post("/:token/reschedule", async (req, res, next) => {
     const endAt = new Date(startAt.getTime() + ev.durationMinutes * 60000);
 
     const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: ev.id } });
-    // Host-wide confirmed bookings, excluding the booking being rescheduled.
+    // Only confirmed bookings that can overlap the requested slot matter. Loading
+    // the host's whole history (the previous behaviour) made this public endpoint
+    // slower every time the host took another booking, for no benefit — the same
+    // mistake `public.ts` was fixed for in DEV-25.
     const others = await prisma.booking.findMany({
-      where: { userId: booking.userId, status: "confirmed", id: { not: booking.id } },
+      where: {
+        userId: booking.userId,
+        status: "confirmed",
+        id: { not: booking.id },
+        startAt: { lt: endAt },
+        endAt: { gt: startAt },
+      },
+      select: { startAt: true, endAt: true, status: true },
     });
     const base = {
       rules: rules.map((r) => ({ weekday: r.weekday, startLocal: r.startLocal, endLocal: r.endLocal })),

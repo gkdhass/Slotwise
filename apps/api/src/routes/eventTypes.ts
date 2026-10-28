@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import { now } from "../lib/clock.js";
+import { isIanaZone } from "../lib/timezone.js";
 import type { AuthedRequest } from "../middleware/auth.js";
 
 const router: Router = Router();
@@ -21,6 +22,16 @@ function slugify(title: string) {
   return title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
 }
 
+/**
+ * The event's zone drives every future slot calculation, so it has to be a real
+ * IANA zone at write time. The public and management routes already validate
+ * theirs; without this a typo such as `Asia/Kolkta` was stored and then threw
+ * inside `generateSlots`, i.e. a 500 on the visitor's page instead of a 422 here.
+ */
+function requireIanaZone(timezone: string) {
+  if (!isIanaZone(timezone)) throw Errors.unprocessable("Unknown time zone.", { timezone: "Unknown time zone" });
+}
+
 router.get("/", async (req: AuthedRequest, res, next) => {
   try {
     const items = await prisma.eventType.findMany({ where: { userId: req.user!.id, archivedAt: null }, orderBy: { createdAt: "desc" } });
@@ -33,6 +44,7 @@ router.post("/", async (req: AuthedRequest, res, next) => {
     const parsed = eventSchema.safeParse(req.body);
     if (!parsed.success) throw parsed.error;
     const data = parsed.data;
+    requireIanaZone(data.timezone);
     const created = await prisma.eventType.create({
       data: {
         userId: req.user!.id,
@@ -65,6 +77,7 @@ router.patch("/:id", async (req: AuthedRequest, res, next) => {
     const parsed = eventSchema.partial().safeParse(req.body);
     if (!parsed.success) throw parsed.error;
     const data = parsed.data;
+    if (data.timezone !== undefined) requireIanaZone(data.timezone);
     if (data.isPublished === true) {
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
       if (!user?.emailVerifiedAt) throw Errors.forbidden();
@@ -140,17 +153,21 @@ router.put("/:id/availability", async (req: AuthedRequest, res, next) => {
         }
       }
     }
-    await prisma.availabilityRule.deleteMany({ where: { eventTypeId: existing.id } });
-    await prisma.availabilityRule.createMany({
-      data: rules.map((r) => ({
-        eventTypeId: existing.id,
-        weekday: r.weekday,
-        startLocal: r.startLocal,
-        endLocal: r.endLocal,
-        timezone: r.timezone,
-      })),
+    // One transaction: a failure between the delete and the insert used to leave
+    // a published event with zero availability, i.e. every slot silently gone.
+    const saved = await prisma.$transaction(async (tx) => {
+      await tx.availabilityRule.deleteMany({ where: { eventTypeId: existing.id } });
+      await tx.availabilityRule.createMany({
+        data: rules.map((r) => ({
+          eventTypeId: existing.id,
+          weekday: r.weekday,
+          startLocal: r.startLocal,
+          endLocal: r.endLocal,
+          timezone: r.timezone,
+        })),
+      });
+      return tx.availabilityRule.findMany({ where: { eventTypeId: existing.id } });
     });
-    const saved = await prisma.availabilityRule.findMany({ where: { eventTypeId: existing.id } });
     res.json(saved);
   } catch (e) { next(e); }
 });

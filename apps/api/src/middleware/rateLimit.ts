@@ -4,9 +4,34 @@ type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
+/**
+ * Expired buckets used to live forever: a bucket is replaced on its next hit,
+ * but a key that is never hit again (an attacker-chosen email on the login
+ * limiter, for example) stayed in the map. The map is swept once it reaches this
+ * size, which bounds memory at roughly one window of traffic per process.
+ */
+const SWEEP_THRESHOLD = 1000;
+
 /** Test helper: clear all counters. */
 export function resetRateLimits(): void {
   buckets.clear();
+}
+
+/** Test helper: how many buckets are currently held. */
+export function rateLimitBucketCount(): number {
+  return buckets.size;
+}
+
+/** Drops every bucket whose window has already ended. */
+export function sweepExpiredBuckets(nowMs: number = Date.now()): number {
+  let removed = 0;
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= nowMs) {
+      buckets.delete(key);
+      removed += 1;
+    }
+  }
+  return removed;
 }
 
 function num(name: string, fallback: number): number {
@@ -39,6 +64,7 @@ export function rateLimit(opts: RateLimitOptions) {
     const extra = opts.key?.(req) ?? "";
     const key = `${opts.name}:${req.ip}:${extra}`;
     const now = Date.now();
+    if (buckets.size >= SWEEP_THRESHOLD) sweepExpiredBuckets(now);
     let b = buckets.get(key);
     if (!b || b.resetAt <= now) {
       b = { count: 0, resetAt: now + windowMs };

@@ -5,30 +5,13 @@ import { Errors } from "../lib/errors.js";
 import { generateSlots, MAX_SLOT_RANGE_DAYS } from "@slotwise/shared";
 import { now } from "../lib/clock.js";
 import { randomToken, hashToken } from "../lib/hash.js";
+import { isIanaZone } from "../lib/timezone.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 
 const router: Router = Router();
 
 const slotsLimiter = rateLimit({ name: "slots", windowMs: 60_000, max: 120 });
 const bookingLimiter = rateLimit({ name: "booking", windowMs: 60_000, max: 20 });
-
-/**
- * `isIanaZone` constructs an `Intl.DateTimeFormat`, which costs ~0.5 ms — 2 % of
- * the slots endpoint's CPU when it runs on every request. The set of valid zones
- * is small and fixed, so validated zones are remembered.
- */
-const VALID_ZONES = new Set<string>();
-
-function isIanaZone(tz: string): boolean {
-  if (VALID_ZONES.has(tz)) return true;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
-    if (VALID_ZONES.size < 500) VALID_ZONES.add(tz);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 router.get("/:slug", async (req, res, next) => {
   try {
