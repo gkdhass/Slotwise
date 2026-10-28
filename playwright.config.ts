@@ -44,7 +44,9 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --filter @slotwise/web dev",
-      url: "http://localhost:5173",
+      // Probe IPv4 loopback: Vite binds 127.0.0.1 and on Linux runners
+      // `localhost` can resolve to ::1 first, which nothing is listening on.
+      url: "http://127.0.0.1:5173",
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
