@@ -1,4 +1,5 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
+import { resetNowForTesting, setNowForTesting } from "../../src/lib/clock.js";
 import {
   app,
   book,
@@ -16,7 +17,20 @@ const track = (id: string) => {
   return id;
 };
 
+/**
+ * The assertions below name exact DST dates, so the server clock is frozen just
+ * before them. Without this the suite rots: `generateSlots` hides slots that
+ * start in the past, so once real time passes March/June/November 2027 every
+ * window below would come back empty.
+ */
+const PINNED_NOW = "2027-01-01T00:00:00.000Z";
+
+beforeAll(() => {
+  setNowForTesting(PINNED_NOW);
+});
+
 afterAll(async () => {
+  resetNowForTesting();
   await purgeUsers(createdUserIds);
   await prisma.$disconnect();
 });
@@ -191,6 +205,50 @@ describe("time zones at the API level", () => {
     });
     expect(booking.status).toBe(422);
     expect(booking.body.error.fieldErrors.timezone).toBeTruthy();
+  });
+
+  it("hides slots that start before the injected clock (clock is wired into the route)", async () => {
+    const { agent, userId } = await createOwner({ prefix: "tz-clock" });
+    track(userId);
+    const ev = await createEvent(agent, {
+      title: "Clock wiring",
+      durationMinutes: 30,
+      timezone: "America/New_York",
+      rules: ALL_DAYS.map((weekday) => ({ weekday, startLocal: "09:00", endLocal: "12:00" })),
+    });
+
+    // Monday 7 June 2027, EDT (UTC-4): 09:00-12:00 wall clock == 13:00-16:00 UTC.
+    const from = "2027-06-07T00:00:00.000Z";
+    const to = "2027-06-08T00:00:00.000Z";
+
+    // Pinned at 2027-01-01 (before the window): the whole grid is in the future.
+    const future = await slotsBetween(ev.slug, from, to, "America/New_York");
+    expect(future.map((s) => s.startAt)).toEqual([
+      "2027-06-07T13:00:00.000Z",
+      "2027-06-07T13:30:00.000Z",
+      "2027-06-07T14:00:00.000Z",
+      "2027-06-07T14:30:00.000Z",
+      "2027-06-07T15:00:00.000Z",
+      "2027-06-07T15:30:00.000Z",
+    ]);
+
+    // Move the clock into the middle of that grid: slots starting before it
+    // (with a one-minute grace) must disappear, later ones must remain.
+    setNowForTesting("2027-06-07T14:10:00.000Z");
+    try {
+      const remaining = await slotsBetween(ev.slug, from, to, "America/New_York");
+      expect(remaining.map((s) => s.startAt)).toEqual([
+        "2027-06-07T14:30:00.000Z",
+        "2027-06-07T15:00:00.000Z",
+        "2027-06-07T15:30:00.000Z",
+      ]);
+    } finally {
+      setNowForTesting(PINNED_NOW);
+    }
+
+    // Restoring the clock restores the full grid.
+    const restored = await slotsBetween(ev.slug, from, to, "America/New_York");
+    expect(restored).toHaveLength(6);
   });
 
   it("an inverted or overlong slot window is rejected instead of returning garbage", async () => {

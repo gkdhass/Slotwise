@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import { generateSlots } from "@slotwise/shared";
+import { now } from "../lib/clock.js";
 import { randomToken, hashToken } from "../lib/hash.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 
@@ -59,7 +60,7 @@ router.get("/:slug/slots", slotsLimiter, async (req, res, next) => {
       from: fromDate,
       to: toDate,
       existingBookings: bookings.map((b) => ({ startAt: b.startAt.toISOString(), endAt: b.endAt.toISOString(), status: b.status })),
-      now: new Date(),
+      now: now(),
     });
     res.json(slots);
   } catch (e) { next(e); }
@@ -117,7 +118,7 @@ router.post("/:slug/bookings", bookingLimiter, async (req, res, next) => {
       displayTimezone: data.timezone,
       from: startAt,
       to: endAt,
-      now: new Date(),
+      now: now(),
     };
 
     // 1. Is this a real slot on the availability grid at all?
@@ -156,7 +157,7 @@ router.post("/:slug/bookings", bookingLimiter, async (req, res, next) => {
           data: {
             bookingId: b.id,
             tokenHash: hashToken(rt),
-            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+            expiresAt: new Date(now().getTime() + 1000 * 60 * 60 * 24 * 30),
           },
         });
         await tx.outboxJob.create({
@@ -165,7 +166,7 @@ router.post("/:slug/bookings", bookingLimiter, async (req, res, next) => {
             jobType: "booking_confirmation",
             status: "pending",
             payload: { bookingId: b.id, to: data.invitee.email },
-            availableAt: new Date(),
+            availableAt: now(),
           },
         });
         return { b, rt };

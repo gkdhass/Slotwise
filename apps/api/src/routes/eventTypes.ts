@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
+import { now } from "../lib/clock.js";
 import type { AuthedRequest } from "../middleware/auth.js";
 
 const router: Router = Router();
@@ -94,7 +95,7 @@ router.delete("/:id", async (req: AuthedRequest, res, next) => {
   try {
     const existing = await prisma.eventType.findFirst({ where: { id: String(req.params.id), userId: req.user!.id } });
     if (!existing) throw Errors.notFound();
-    await prisma.eventType.update({ where: { id: existing.id }, data: { archivedAt: new Date(), isPublished: false } });
+    await prisma.eventType.update({ where: { id: existing.id }, data: { archivedAt: now(), isPublished: false } });
     res.status(204).send();
   } catch (e) { next(e); }
 });

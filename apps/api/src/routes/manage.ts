@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import { hashToken } from "../lib/hash.js";
+import { now } from "../lib/clock.js";
 import { generateSlots } from "@slotwise/shared";
 
 const router: Router = Router();
@@ -15,7 +16,7 @@ const router: Router = Router();
 async function loadBooking(token: string) {
   if (!token || token.length < 16) return null;
   const mt = await prisma.managementToken.findUnique({ where: { tokenHash: hashToken(token) } });
-  if (!mt || mt.expiresAt < new Date()) return null;
+  if (!mt || mt.expiresAt < now()) return null;
   const booking = await prisma.booking.findUnique({ where: { id: mt.bookingId }, include: { eventType: true } });
   if (!booking) return null;
   return { mt, booking };
@@ -57,7 +58,7 @@ router.post("/:token/cancel", async (req, res, next) => {
           jobType: "booking_canceled",
           status: "pending",
           payload: { bookingId: booking.id, to: booking.inviteeEmail },
-          availableAt: new Date(),
+          availableAt: now(),
         },
       });
       return b;
@@ -98,7 +99,7 @@ router.post("/:token/reschedule", async (req, res, next) => {
       displayTimezone: tz,
       from: startAt,
       to: endAt,
-      now: new Date(),
+      now: now(),
     };
     const onGrid = generateSlots({ ...base, existingBookings: [] }).some((s) => s.startAt === startAt.toISOString());
     if (!onGrid) {
@@ -131,7 +132,7 @@ router.post("/:token/reschedule", async (req, res, next) => {
             jobType: "booking_rescheduled",
             status: "pending",
             payload: { bookingId: booking.id, to: booking.inviteeEmail, startAt: startAt.toISOString() },
-            availableAt: new Date(),
+            availableAt: now(),
           },
         });
         return b;
