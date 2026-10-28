@@ -50,6 +50,30 @@ test("S07 lists real slots in the host time zone and blocks Continue until one i
   await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
 });
 
+test("S07 drops the previous day's slots and selection when the date changes", async ({ page, request }) => {
+  const firstDate = upcomingWeekday(8);
+  const secondDate = upcomingWeekday(9);
+  const secondSlots = await slotsForDate(request, secondDate);
+  expect(secondSlots.length).toBeGreaterThan(0);
+
+  await page.goto("/book/intro-tutoring/slots");
+  const slotButtons = page.locator("button[aria-pressed]");
+  await page.getByLabel("Date").fill(firstDate);
+  await expect(slotButtons.first()).toBeVisible();
+  await slotButtons.first().click();
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+
+  // Changing the date invalidates the choice. While the new list loads, the old
+  // buttons must not remain clickable — a click on a stale slot used to survive
+  // into a list that no longer contained it — and Continue must go back to
+  // disabled until a slot from the new day is chosen.
+  await page.getByLabel("Date").fill(secondDate);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await expect(slotButtons).toHaveCount(secondSlots.length);
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
+});
+
 test("S10 shows a generic denial for an unknown management token", async ({ page }) => {
   await page.goto(`/manage/${"f".repeat(64)}`);
   await expect(page.getByRole("heading", { name: "Booking unavailable" })).toBeVisible();

@@ -74,6 +74,14 @@ export default function S07SlotSelector() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    // A new (slug, date, zone) query invalidates both the previous list and the
+    // previous choice. Leaving the old buttons on screen let a visitor click a
+    // time from the *previous* date while the new list was still loading; the
+    // click then survived into a list that no longer contained that slot, so
+    // Continue carried a time that was not on screen. Clearing both keeps the
+    // visible slots and the selection in step with the query.
+    setSlots([]);
+    setSelected(null);
     // Query a 3-day window so any zone offset is covered, then filter to the
     // chosen date in the event's time zone. The window is clamped to the API's
     // documented maximum (MAX_SLOT_RANGE_DAYS) so client and server cannot drift.
