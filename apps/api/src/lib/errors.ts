@@ -12,6 +12,8 @@ export class AppError extends Error {
 export const Errors = {
   validation: (msg = "Check the highlighted fields and try again.", fieldErrors: Record<string, string> = {}) =>
     new AppError("VALIDATION_ERROR", 400, msg, fieldErrors),
+  unprocessable: (msg = "That request could not be completed.", fieldErrors: Record<string, string> = {}) =>
+    new AppError("UNPROCESSABLE", 422, msg, fieldErrors),
   unauthorized: () => new AppError("UNAUTHORIZED", 401, "Authentication required."),
   forbidden: () => new AppError("FORBIDDEN", 403, "You are not allowed to do that."),
   notFound: () => new AppError("NOT_FOUND", 404, "Resource not found."),

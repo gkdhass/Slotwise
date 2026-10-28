@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "node:crypto";
+import { csrfBypassActive } from "../lib/config.js";
 
 const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "x-csrf-token";
@@ -18,7 +19,9 @@ export function issueCsrf(_req: Request, res: Response, next: NextFunction) {
 }
 
 export function csrfProtect(req: Request, res: Response, next: NextFunction) {
-  if (process.env.NODE_ENV === "test") return next();
+  // Bypass is only possible in tests, and only when CSRF_DISABLED=true.
+  // assertProductionSafety() refuses to start a production process with that flag.
+  if (csrfBypassActive()) return next();
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
   const cookieToken = req.cookies?.[CSRF_COOKIE];
   const headerToken = req.get(CSRF_HEADER);

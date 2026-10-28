@@ -1,34 +1,78 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../lib/errors.js";
-import { Prisma } from "@prisma/client";
+
+function isExclusionViolation(err: unknown): boolean {
+  const text = (() => {
+    try {
+      return JSON.stringify(err, Object.getOwnPropertyNames(err as object));
+    } catch {
+      return String(err);
+    }
+  })();
+  return (
+    text.includes("23P01") ||
+    text.includes("40P01") ||
+    text.includes("deadlock") ||
+    text.includes("bookings_no_host_overlap") ||
+    text.includes("exclusion constraint") ||
+    text.includes("conflicting key value violates exclusion")
+  );
+}
 
 export function errorHandler(err: any, req: Request & { id?: string }, res: Response, _next: NextFunction) {
   const requestId = req.id ?? "";
-  // Prisma unique violation / exclusion constraint
-  if (err?.code === "P2002") {
-    return res.status(409).json({ error: { code: "CONFLICT", message: "Conflict.", requestId, fieldErrors: {} } });
-  }
-  if (err?.code === "P2003") {
-    return res.status(409).json({ error: { code: "CONFLICT", message: "Conflict.", requestId, fieldErrors: {} } });
-  }
-  // Raw pg error for exclusion constraint (SQLSTATE 23P01) surfaces via Prisma query error with code P2010? 
-  // Detect by message/code
-  const msg = String(err?.message ?? "");
-  if (msg.includes("23P01") || msg.includes("40P01") || msg.includes("deadlock") || msg.includes("bookings_no_host_overlap") || msg.includes("exclusion constraint")) {
-    return res.status(409).json({ error: { code: "SLOT_UNAVAILABLE", message: "That time is no longer available. Choose another slot.", requestId, fieldErrors: {} } });
-  }
+
   if (err instanceof AppError) {
-    return res.status(err.status).json({ error: { code: err.code, message: err.message, requestId, fieldErrors: err.fieldErrors } });
+    return res
+      .status(err.status)
+      .json({ error: { code: err.code, message: err.message, requestId, fieldErrors: err.fieldErrors } });
   }
-  // Zod validation errors
+
   if (err?.name === "ZodError") {
     const fieldErrors: Record<string, string> = {};
     for (const issue of err.issues ?? []) {
       const path = (issue.path ?? []).join(".") || "form";
       fieldErrors[path] = issue.message;
     }
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Check the highlighted fields and try again.", requestId, fieldErrors } });
+    return res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Check the highlighted fields and try again.",
+        requestId,
+        fieldErrors,
+      },
+    });
   }
+
+  if (isExclusionViolation(err)) {
+    return res.status(409).json({
+      error: {
+        code: "SLOT_UNAVAILABLE",
+        message: "That time is no longer available. Choose another slot.",
+        requestId,
+        fieldErrors: {},
+      },
+    });
+  }
+
+  if (err?.code === "P2002") {
+    return res
+      .status(409)
+      .json({ error: { code: "CONFLICT", message: "Conflict.", requestId, fieldErrors: {} } });
+  }
+  if (err?.code === "P2003") {
+    return res
+      .status(409)
+      .json({ error: { code: "CONFLICT", message: "Conflict.", requestId, fieldErrors: {} } });
+  }
+  if (err?.code === "P2025") {
+    return res
+      .status(404)
+      .json({ error: { code: "NOT_FOUND", message: "Resource not found.", requestId, fieldErrors: {} } });
+  }
+
   console.error("[error]", requestId, err);
-  return res.status(500).json({ error: { code: "INTERNAL", message: "Unexpected server error.", requestId, fieldErrors: {} } });
+  return res.status(500).json({
+    error: { code: "INTERNAL", message: "Unexpected server error.", requestId, fieldErrors: {} },
+  });
 }
