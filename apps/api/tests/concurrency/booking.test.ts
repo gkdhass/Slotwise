@@ -5,7 +5,6 @@ import { prisma } from "../../src/lib/prisma.js";
 import { hashPassword } from "../../src/lib/hash.js";
 
 describe("concurrency: no double bookings", () => {
-  let cookie: string;
   let userId: string;
   let slugA: string;
   let slugB: string;
@@ -32,8 +31,6 @@ describe("concurrency: no double bookings", () => {
         { eventTypeId: evB.id, weekday: 2, startLocal: "00:00", endLocal: "23:59", timezone: "UTC" },
       ],
     });
-    const login = await request(app).post("/api/v1/auth/login").send({ email, password: "password123" });
-    cookie = login.headers["set-cookie"][0];
   });
 
   afterAll(async () => {
