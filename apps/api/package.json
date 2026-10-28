@@ -17,6 +17,7 @@
     "test:security": "vitest run --config vitest.security.config.ts",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
     "seed:perf": "tsx prisma/seed-perf.ts",
+    "delete:account": "tsx scripts/delete-account.ts",
     "worker:email": "tsx src/worker/emailWorker.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
