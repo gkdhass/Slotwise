@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "startedAt": "2026-10-28T07:06:33.107Z",
+    "node": "v22.16.0",
+    "platform": "Windows_NT 10.0.26300 (win32 x64)",
+    "cpu": "12th Gen Intel(R) Core(TM) i3-1215U",
+    "cores": 8,
+    "memoryGb": 7.7,
+    "apiMode": "compiled bundle (node dist/server.js), NODE_ENV=production",
+    "loadGenerator": "node:http closed loop, per-request latency sampling (exact p95)",
+    "profile": {
+      "connections": 20,
+      "durationSeconds": 20,
+      "warmupSeconds": 5,
+      "thinkTime": "none"
+    },
+    "rateLimits": "raised for the measurement (RATE_LIMIT_*_MAX=1000000)",
+    "version": "PostgreSQL 18.3 on x86_64-windows, compiled by msvc-19.44.35223, 64-bit",
+    "database": "slotwise",
+    "dbTarget": "unknown"
+  },
+  "checks": [
+    {
+      "name": "GET /public/:slug",
+      "requests": 13865,
+      "ok": 13865,
+      "rps": 692.9,
+      "p50": 26.4,
+      "p95": 45.2,
+      "p99": 58,
+      "max": 80,
+      "mean": 28.8,
+      "non2xx": 0,
+      "errors": 0
+    },
+    {
+      "name": "GET /public/:slug/slots",
+      "requests": 1018,
+      "ok": 1011,
+      "rps": 1.1,
+      "p50": 199.6,
+      "p95": 230,
+      "p99": 902889.6,
+      "max": 903086,
+      "mean": 11808.8,
+      "non2xx": 0,
+      "errors": 7
+    }
+  ],
+  "crossCheck": {
+    "slug": {
+      "requests": 1592,
+      "rps": 318.4,
+      "p50": 44,
+      "p95NotReported": "autocannon emits p97_5, not p95",
+      "p97_5": 122,
+      "p99": 465,
+      "max": 570,
+      "non2xx": 0,
+      "errors": 20
+    },
+    "slots": {
+      "requests": 559,
+      "rps": 27.9,
+      "p50": 398,
+      "p95NotReported": "autocannon emits p97_5, not p95",
+      "p97_5": 3290,
+      "p99": 3944,
+      "max": 4223,
+      "non2xx": 0,
+      "errors": 0
+    }
+  },
+  "nfr01": {
+    "metric": "p95",
+    "limitMs": 500,
+    "pass": false
+  }
+}
