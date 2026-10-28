@@ -4,6 +4,7 @@
  *   pnpm perf                       full run (build + seed + start + measure)
  *   pnpm perf --skip-build          reuse the current dist/server.js
  *   pnpm perf --connections 50 --duration 30
+ *   pnpm perf --request-timeout-ms 10000
  *   pnpm perf --autocannon          add an independent autocannon cross-check
  *
  * Steps, with no manual setup:
@@ -11,8 +12,14 @@
  *   2. seed a dedicated published event (`perf-load-test`)
  *   3. start the built server on port 4100 with NODE_ENV=production
  *   4. warm up, then measure GET /api/v1/public/:slug and its /slots
- *   5. assert p95 <= 500 ms with zero errors / zero non-2xx
+ *   5. assert p95 <= 500 ms with zero errors / zero non-2xx / zero timeouts
  *   6. print a table and write docs/perf/<timestamp>.json
+ *
+ * A stalled machine is reported as such. Every request has a hard ceiling
+ * (`--request-timeout-ms`, default 30 s) and each run must finish within
+ * `--duration` + 60 s. On 2026-10-28 a suspend mid-run produced a single
+ * 903-second "/slots" sample inside a 20-second window; without these guards the
+ * only symptom was 7 opaque connection errors and a meaningless p99.
  *
  * Load profile: 20 concurrent connections, closed loop (a connection sends the
  * next request as soon as the previous response completes), no think time, 20 s
@@ -48,6 +55,8 @@ const CONNECTIONS = flag("connections", 20);
 const DURATION = flag("duration", 20);
 const WARMUP = flag("warmup", 5);
 const PORT = flag("port", 4100);
+/** Per-request ceiling. A hung socket must fail loudly, not poison the tail. */
+const REQUEST_TIMEOUT_MS = flag("request-timeout-ms", 30_000);
 const BASE = `http://127.0.0.1:${PORT}`;
 const SLUG = "perf-load-test";
 const NFR_01_P95_MS = 500;
@@ -94,8 +103,10 @@ function dbTarget() {
       env: process.env,
       encoding: "utf8",
     });
-    const line = out.split(/\r?\n/).find((l) => l.includes("host-type="));
-    return line ? line.trim().replace(/^\.env: /, "") : "unknown";
+    // check-db-target prints `    line N: commented=false value-length=54 -> LOCAL`
+    // and never the URL itself, so this stays safe to copy into the artifact.
+    const line = out.split(/\r?\n/).find((l) => /->\s*(LOCAL|REMOTE|UNKNOWN)\s*$/.test(l));
+    return line ? line.trim().split("->").pop().trim() : "unknown";
   } catch {
     return "unknown";
   }
@@ -132,6 +143,11 @@ function percentile(sorted, p) {
 /**
  * Closed-loop load for `durationMs` with `connections` concurrent keep-alive
  * sockets. Every request's latency is recorded so p95 is exact.
+ *
+ * Each request has a hard ceiling (`--request-timeout-ms`, default 30 s). Without
+ * one, a socket that never completes is counted as one enormous "latency" and the
+ * run fails later with an opaque connection error. A timed-out request is
+ * counted as a timeout, not as a sample.
  */
 function generateLoad(urlString, { connections, durationMs }) {
   const url = new URL(urlString);
@@ -139,10 +155,19 @@ function generateLoad(urlString, { connections, durationMs }) {
   const latencies = [];
   let errors = 0;
   let non2xx = 0;
+  let timeouts = 0;
   const deadline = Date.now() + durationMs;
 
   const one = () =>
     new Promise((resolve) => {
+      let settled = false;
+      let timedOut = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+
       const started = process.hrtime.bigint();
       const req = http.request(
         {
@@ -163,13 +188,19 @@ function generateLoad(urlString, { connections, durationMs }) {
             } else {
               non2xx += 1;
             }
-            resolve();
+            finish();
           });
         },
       );
+
+      req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+        timedOut = true;
+        timeouts += 1;
+        req.destroy(new Error(`request exceeded ${REQUEST_TIMEOUT_MS} ms`));
+      });
       req.on("error", () => {
-        errors += 1;
-        resolve();
+        if (!timedOut) errors += 1;
+        finish();
       });
       req.end();
     });
@@ -183,7 +214,7 @@ function generateLoad(urlString, { connections, durationMs }) {
     agent.destroy();
     const seconds = (Date.now() - startedAt) / 1000;
     const sorted = latencies.slice().sort((a, b) => a - b);
-    const total = sorted.length + non2xx + errors;
+    const total = sorted.length + non2xx + errors + timeouts;
     return {
       requests: total,
       ok: sorted.length,
@@ -195,6 +226,8 @@ function generateLoad(urlString, { connections, durationMs }) {
       mean: Number((sorted.reduce((a, b) => a + b, 0) / (sorted.length || 1)).toFixed(1)),
       non2xx,
       errors,
+      timeouts,
+      elapsedSeconds: Number(seconds.toFixed(1)),
     };
   });
 }
@@ -323,11 +356,12 @@ async function main() {
   ];
 
   console.log("\n== results (NFR-01: p95 < 500 ms) ==");
-  console.log("endpoint                            rps     p50     p95     p99     max    non2xx  errors");
+  console.log("endpoint                            rps     p50     p95     p99     max    non2xx  errors  timeouts    secs");
   for (const c of checks) {
     console.log(
       `${c.name.padEnd(32)}${String(c.rps).padStart(8)}${String(c.p50).padStart(8)}${String(c.p95).padStart(8)}` +
-        `${String(c.p99).padStart(8)}${String(c.max).padStart(8)}${String(c.non2xx).padStart(8)}${String(c.errors).padStart(8)}`,
+        `${String(c.p99).padStart(8)}${String(c.max).padStart(8)}${String(c.non2xx).padStart(8)}` +
+        `${String(c.errors).padStart(8)}${String(c.timeouts).padStart(10)}${String(c.elapsedSeconds).padStart(8)}`,
     );
   }
   if (cross) {
@@ -344,14 +378,35 @@ async function main() {
     }
   }
 
+  // A healthy run ends at its deadline. Anything materially later means in-flight
+  // requests hung past it, which is an environment/harness problem rather than a
+  // latency number — say so plainly instead of reporting a meaningless tail.
+  const STALL_SLACK_S = 60;
   const failures = [];
   for (const c of checks) {
     if (c.p95 > NFR_01_P95_MS) failures.push(`${c.name}: p95 ${c.p95} ms exceeds ${NFR_01_P95_MS} ms`);
     if (c.non2xx > 0) failures.push(`${c.name}: ${c.non2xx} non-2xx responses`);
     if (c.errors > 0) failures.push(`${c.name}: ${c.errors} connection errors`);
+    if (c.timeouts > 0)
+      failures.push(`${c.name}: ${c.timeouts} requests exceeded the ${REQUEST_TIMEOUT_MS} ms request ceiling (server stalled?)`);
+    if (c.elapsedSeconds > DURATION + STALL_SLACK_S)
+      failures.push(
+        `${c.name}: run took ${c.elapsedSeconds}s for a ${DURATION}s window — the machine stalled mid-run, so these percentiles are not a latency measurement. Re-run on an idle machine.`,
+      );
   }
 
-  const artifact = { meta, checks, crossCheck: cross, nfr01: { metric: "p95", limitMs: NFR_01_P95_MS, pass: failures.length === 0 } };
+  const artifact = {
+    meta,
+    checks,
+    crossCheck: cross,
+    nfr01: {
+      metric: "p95",
+      limitMs: NFR_01_P95_MS,
+      requestTimeoutMs: REQUEST_TIMEOUT_MS,
+      stallSlackSeconds: STALL_SLACK_S,
+      pass: failures.length === 0,
+    },
+  };
   const dir = path.join(root, "docs", "perf");
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `load-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
@@ -363,7 +418,7 @@ async function main() {
     for (const f of failures) console.log(`  - ${f}`);
     process.exit(1);
   }
-  console.log(`\nRESULT: PASS — both endpoints p95 < ${NFR_01_P95_MS} ms, no errors`);
+  console.log(`\nRESULT: PASS — both endpoints p95 < ${NFR_01_P95_MS} ms, no errors or timeouts`);
 }
 
 main().catch((err) => {

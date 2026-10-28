@@ -1,6 +1,6 @@
 {
   "meta": {
-    "startedAt": "2026-10-28T06:25:59.256Z",
+    "startedAt": "2026-10-28T08:09:03.341Z",
     "node": "v22.16.0",
     "platform": "Windows_NT 10.0.26300 (win32 x64)",
     "cpu": "12th Gen Intel(R) Core(TM) i3-1215U",
@@ -17,56 +17,60 @@
     "rateLimits": "raised for the measurement (RATE_LIMIT_*_MAX=1000000)",
     "version": "PostgreSQL 18.3 on x86_64-windows, compiled by msvc-19.44.35223, 64-bit",
     "database": "slotwise",
-    "dbTarget": "unknown"
+    "dbTarget": "LOCAL"
   },
   "checks": [
     {
       "name": "GET /public/:slug",
-      "requests": 9680,
-      "ok": 9680,
-      "rps": 483.6,
-      "p50": 40,
-      "p95": 50.7,
-      "p99": 74.4,
-      "max": 154.3,
-      "mean": 41.3,
+      "requests": 4353,
+      "ok": 4353,
+      "rps": 216.8,
+      "p50": 71.3,
+      "p95": 176.9,
+      "p99": 518.7,
+      "max": 960,
+      "mean": 92,
       "non2xx": 0,
-      "errors": 0
+      "errors": 0,
+      "timeouts": 0,
+      "elapsedSeconds": 20.1
     },
     {
       "name": "GET /public/:slug/slots",
-      "requests": 1266,
-      "ok": 1266,
-      "rps": 62.4,
-      "p50": 320.6,
-      "p95": 349.8,
-      "p99": 368.5,
-      "max": 379.8,
-      "mean": 318.1,
+      "requests": 732,
+      "ok": 732,
+      "rps": 35.6,
+      "p50": 453.8,
+      "p95": 1125.3,
+      "p99": 2017.7,
+      "max": 2165.2,
+      "mean": 554.1,
       "non2xx": 0,
-      "errors": 0
+      "errors": 0,
+      "timeouts": 0,
+      "elapsedSeconds": 20.6
     }
   ],
   "crossCheck": {
     "slug": {
-      "requests": 9972,
-      "rps": 498.6,
-      "p50": 39,
+      "requests": 5756,
+      "rps": 287.8,
+      "p50": 64,
       "p95NotReported": "autocannon emits p97_5, not p95",
-      "p97_5": 51,
-      "p99": 58,
-      "max": 74,
+      "p97_5": 132,
+      "p99": 150,
+      "max": 162,
       "non2xx": 0,
       "errors": 0
     },
     "slots": {
-      "requests": 1252,
-      "rps": 62.6,
-      "p50": 319,
+      "requests": 908,
+      "rps": 45.4,
+      "p50": 403,
       "p95NotReported": "autocannon emits p97_5, not p95",
-      "p97_5": 360,
-      "p99": 378,
-      "max": 406,
+      "p97_5": 1054,
+      "p99": 1546,
+      "max": 1663,
       "non2xx": 0,
       "errors": 0
     }
@@ -74,6 +78,8 @@
   "nfr01": {
     "metric": "p95",
     "limitMs": 500,
-    "pass": true
+    "requestTimeoutMs": 30000,
+    "stallSlackSeconds": 60,
+    "pass": false
   }
 }
