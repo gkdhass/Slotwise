@@ -35,6 +35,8 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+# Playwright storage state contains real session cookies.
+tests/e2e/.auth/
 
 # Docker volumes
 pgdata/
