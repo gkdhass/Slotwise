@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../lib/errors.js";
+import { captureError } from "../lib/errorMonitor.js";
 
 function isExclusionViolation(err: unknown): boolean {
   const text = (() => {
@@ -71,7 +72,8 @@ export function errorHandler(err: any, req: Request & { id?: string }, res: Resp
       .json({ error: { code: "NOT_FOUND", message: "Resource not found.", requestId, fieldErrors: {} } });
   }
 
-  console.error("[error]", requestId, err);
+  // Structured log + optional monitor webhook, never a bare console dump.
+  captureError(err, { requestId, method: req.method, path: req.originalUrl, status: 500 });
   return res.status(500).json({
     error: { code: "INTERNAL", message: "Unexpected server error.", requestId, fieldErrors: {} },
   });

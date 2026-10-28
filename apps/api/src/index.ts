@@ -10,6 +10,8 @@ import { loadSession, requireAuth } from "./middleware/auth.js";
 import { issueCsrf, csrfProtect } from "./middleware/csrf.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { assertProductionSafety, corsAllowList } from "./lib/config.js";
+import { logger } from "./lib/logger.js";
+import { prisma } from "./lib/prisma.js";
 import authRoutes from "./routes/auth.js";
 import eventTypeRoutes from "./routes/eventTypes.js";
 import publicRoutes from "./routes/public.js";
@@ -41,16 +43,45 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Request-Id", "X-Worker-Secret"],
+    // Let browser code read the correlation id for bug reports.
+    exposedHeaders: ["X-Request-Id"],
   }),
 );
 
 app.use(express.json({ limit: "64kb" }));
 app.use(cookieParser());
-app.use(pinoHttp({ enabled: process.env.NODE_ENV !== "test" }));
+app.use(
+  pinoHttp({
+    logger,
+    // The id assigned by the requestId middleware above, not a second one.
+    genReqId: (req) => (req as { id?: string }).id ?? "unknown",
+    // Health probes would otherwise dominate the log on a busy host.
+    autoLogging: { ignore: (req) => req.url === "/health" || req.url === "/health/ready" },
+  }),
+);
 app.use(issueCsrf);
 app.use(loadSession as any);
 
+/**
+ * Liveness: the process is up and serving. Deliberately does not touch the
+ * database, so a platform health check does not fail because of a slow query.
+ */
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "slotwise-api", version: "0.0.0" }));
+
+/**
+ * Readiness: the process can serve real traffic, which for this API means the
+ * database answers. Returns 503 so a load balancer takes the instance out.
+ */
+app.get("/health/ready", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", database: "ok" });
+  } catch (e) {
+    logger.error({ err: (e as Error).message }, "readiness check failed");
+    res.status(503).json({ status: "unavailable", database: "unreachable" });
+  }
+});
+
 app.get("/api/v1/health", (_req, res) => res.json({ status: "ok" }));
 
 app.use("/api/v1/auth", authRoutes);
