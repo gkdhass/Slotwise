@@ -2,8 +2,26 @@ import { Router } from "express";
 import { z } from "zod";
 import { register, verifyEmail, login, logout, getSessionUser, requestPasswordReset, resetPassword } from "../services/authService.js";
 import { Errors } from "../lib/errors.js";
+import { rateLimit } from "../middleware/rateLimit.js";
+import { csrfProtect } from "../middleware/csrf.js";
 
 const router: Router = Router();
+
+/**
+ * CSRF bootstrap: a harmless GET that makes `issueCsrf` hand out the
+ * double-submit cookie. The SPA calls this before its first mutation.
+ */
+router.get("/csrf", (_req, res) => {
+  res.json({ ok: true });
+});
+
+const loginLimiter = rateLimit({
+  name: "login",
+  windowMs: 15 * 60_000,
+  max: 10,
+  key: (req) => String((req.body as { email?: string } | undefined)?.email ?? "").toLowerCase(),
+});
+const registerLimiter = rateLimit({ name: "register", windowMs: 60 * 60_000, max: 20 });
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -15,7 +33,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-router.post("/register", async (req, res, next) => {
+router.post("/register", registerLimiter, csrfProtect, async (req, res, next) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) throw parsed.error;
@@ -26,7 +44,7 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-router.post("/verify-email", async (req, res, next) => {
+router.post("/verify-email", csrfProtect, async (req, res, next) => {
   try {
     const token = z.string().min(1).parse(req.body?.token);
     await verifyEmail(token);
@@ -36,7 +54,7 @@ router.post("/verify-email", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+router.post("/login", loginLimiter, csrfProtect, async (req, res, next) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) throw parsed.error;
@@ -54,7 +72,7 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-router.post("/logout", async (req, res, next) => {
+router.post("/logout", csrfProtect, async (req, res, next) => {
   try {
     await logout(req.cookies?.session);
     res.clearCookie("session", { path: "/" });
@@ -74,7 +92,7 @@ router.get("/me", async (req, res, next) => {
   }
 });
 
-router.post("/password-reset/request", async (req, res, next) => {
+router.post("/password-reset/request", csrfProtect, async (req, res, next) => {
   try {
     const email = z.string().email().parse(req.body?.email);
     await requestPasswordReset(email);
@@ -84,7 +102,7 @@ router.post("/password-reset/request", async (req, res, next) => {
   }
 });
 
-router.post("/password-reset/confirm", async (req, res, next) => {
+router.post("/password-reset/confirm", csrfProtect, async (req, res, next) => {
   try {
     const body = z.object({ token: z.string().min(1), password: z.string().min(8) }).parse(req.body);
     await resetPassword(body.token, body.password);

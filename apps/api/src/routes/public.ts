@@ -4,12 +4,25 @@ import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import { generateSlots } from "@slotwise/shared";
 import { randomToken, hashToken } from "../lib/hash.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 
 const router: Router = Router();
 
+const slotsLimiter = rateLimit({ name: "slots", windowMs: 60_000, max: 120 });
+const bookingLimiter = rateLimit({ name: "booking", windowMs: 60_000, max: 20 });
+
+function isIanaZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 router.get("/:slug", async (req, res, next) => {
   try {
-    const ev = await prisma.eventType.findUnique({ where: { slug: req.params.slug } });
+    const ev = await prisma.eventType.findUnique({ where: { slug: String(req.params.slug) } });
     if (!ev || !ev.isPublished || ev.archivedAt) throw Errors.notFound();
     res.json({
       slug: ev.slug,
@@ -23,22 +36,28 @@ router.get("/:slug", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get("/:slug/slots", async (req, res, next) => {
+router.get("/:slug/slots", slotsLimiter, async (req, res, next) => {
   try {
-    const ev = await prisma.eventType.findUnique({ where: { slug: req.params.slug } });
+    const ev = await prisma.eventType.findUnique({ where: { slug: String(req.params.slug) } });
     if (!ev || !ev.isPublished || ev.archivedAt) throw Errors.notFound();
     const from = z.string().datetime().parse(req.query.from);
     const to = z.string().datetime().parse(req.query.to);
     const tz = z.string().min(1).parse(req.query.tz ?? ev.timezone);
+    if (!isIanaZone(tz)) throw Errors.unprocessable("Unknown time zone.", { tz: "Unknown time zone" });
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (!(fromDate < toDate)) throw Errors.unprocessable("`to` must be after `from`.");
+    const spanDays = (toDate.getTime() - fromDate.getTime()) / 86_400_000;
+    if (spanDays > 62) throw Errors.unprocessable("Date range must be 62 days or less.");
     const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: ev.id } });
-    const bookings = await prisma.booking.findMany({ where: { eventTypeId: ev.id, status: "confirmed" } });
+    const bookings = await prisma.booking.findMany({ where: { userId: ev.userId, status: "confirmed" } });
     const slots = generateSlots({
       rules: rules.map((r) => ({ weekday: r.weekday, startLocal: r.startLocal, endLocal: r.endLocal })),
       durationMinutes: ev.durationMinutes,
       eventTimezone: ev.timezone,
       displayTimezone: tz,
-      from: new Date(from),
-      to: new Date(to),
+      from: fromDate,
+      to: toDate,
       existingBookings: bookings.map((b) => ({ startAt: b.startAt.toISOString(), endAt: b.endAt.toISOString(), status: b.status })),
       now: new Date(),
     });
@@ -57,45 +76,60 @@ const bookingSchema = z.object({
   idempotencyKey: z.string().min(1),
 });
 
-router.post("/:slug/bookings", async (req, res, next) => {
+router.post("/:slug/bookings", bookingLimiter, async (req, res, next) => {
   try {
     const parsed = bookingSchema.safeParse(req.body);
     if (!parsed.success) throw parsed.error;
     const data = parsed.data;
-    const ev = await prisma.eventType.findUnique({ where: { slug: req.params.slug } });
+    if (!isIanaZone(data.timezone)) throw Errors.unprocessable("Unknown time zone.", { timezone: "Unknown time zone" });
+    const ev = await prisma.eventType.findUnique({ where: { slug: String(req.params.slug) } });
     if (!ev || !ev.isPublished || ev.archivedAt) throw Errors.notFound();
 
-    // idempotency check
+    // idempotency check: replay returns the same booking outcome (token is not re-issued)
     const existing = await prisma.booking.findFirst({
       where: { userId: ev.userId, idempotencyKey: data.idempotencyKey },
+      include: { eventType: true },
     });
     if (existing) {
-      const token = await prisma.managementToken.findFirst({ where: { bookingId: existing.id } });
       return res.status(200).json({
-        reference: existing.id, // use id as reference for now
+        reference: existing.id,
         booking: existing,
-        managementToken: token?.tokenHash ?? null,
+        managementToken: null,
+        replayed: true,
       });
     }
 
     const startAt = new Date(data.startAt);
     const endAt = new Date(startAt.getTime() + ev.durationMinutes * 60000);
 
-    // validate slot is a valid slot
     const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: ev.id } });
-    const bookings = await prisma.booking.findMany({ where: { eventTypeId: ev.id, status: "confirmed" } });
-    const slots = generateSlots({
+    // No host overlap across event types: consider every confirmed booking for the host.
+    const bookings = await prisma.booking.findMany({ where: { userId: ev.userId, status: "confirmed" } });
+    const existingBookings = bookings.map((b) => ({
+      startAt: b.startAt.toISOString(),
+      endAt: b.endAt.toISOString(),
+      status: b.status,
+    }));
+    const base = {
       rules: rules.map((r) => ({ weekday: r.weekday, startLocal: r.startLocal, endLocal: r.endLocal })),
       durationMinutes: ev.durationMinutes,
       eventTimezone: ev.timezone,
       displayTimezone: data.timezone,
       from: startAt,
       to: endAt,
-      existingBookings: bookings.map((b) => ({ startAt: b.startAt.toISOString(), endAt: b.endAt.toISOString(), status: b.status })),
-      now: new Date(Date.now() - 60000),
-    });
-    const valid = slots.some((s) => s.startAt === startAt.toISOString());
-    if (!valid) throw Errors.validation("Invalid slot.");
+      now: new Date(),
+    };
+
+    // 1. Is this a real slot on the availability grid at all?
+    const onGrid = generateSlots({ ...base, existingBookings: [] }).some((s) => s.startAt === startAt.toISOString());
+    if (!onGrid) {
+      throw Errors.unprocessable("That time is not one of this event's available slots.", {
+        startAt: "Choose a slot from the event page",
+      });
+    }
+    // 2. Is it still free? (409 so the UI can return to slot selection and refresh)
+    const stillFree = generateSlots({ ...base, existingBookings }).some((s) => s.startAt === startAt.toISOString());
+    if (!stillFree) throw Errors.slotUnavailable();
 
     // transaction
     let booking: any;
@@ -103,6 +137,7 @@ router.post("/:slug/bookings", async (req, res, next) => {
     try {
       const result = await prisma.$transaction(async (tx) => {
         const b = await tx.booking.create({
+          include: { eventType: true },
           data: {
             userId: ev.userId,
             eventTypeId: ev.id,
@@ -140,7 +175,10 @@ router.post("/:slug/bookings", async (req, res, next) => {
     } catch (e: any) {
       const full = JSON.stringify(e, Object.getOwnPropertyNames(e));
       if (e?.code === "P2002" || full.includes("P2002")) {
-        const ex = await prisma.booking.findFirst({ where: { userId: ev.userId, idempotencyKey: data.idempotencyKey } });
+        const ex = await prisma.booking.findFirst({
+          where: { userId: ev.userId, idempotencyKey: data.idempotencyKey },
+          include: { eventType: true },
+        });
         if (ex) {
           return res.status(200).json({ reference: ex.id, booking: ex, managementToken: null });
         }

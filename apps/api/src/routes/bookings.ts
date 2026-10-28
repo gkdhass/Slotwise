@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import type { AuthedRequest } from "../middleware/auth.js";
 

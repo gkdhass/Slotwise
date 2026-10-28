@@ -49,6 +49,14 @@ router.post("/", async (req: AuthedRequest, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.get("/:id", async (req: AuthedRequest, res, next) => {
+  try {
+    const ev = await prisma.eventType.findFirst({ where: { id: String(req.params.id), userId: req.user!.id } });
+    if (!ev) throw Errors.notFound();
+    res.json(ev);
+  } catch (e) { next(e); }
+});
+
 router.patch("/:id", async (req: AuthedRequest, res, next) => {
   try {
     const existing = await prisma.eventType.findFirst({ where: { id: String(req.params.id), userId: req.user!.id } });
@@ -59,6 +67,12 @@ router.patch("/:id", async (req: AuthedRequest, res, next) => {
     if (data.isPublished === true) {
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
       if (!user?.emailVerifiedAt) throw Errors.forbidden();
+      const ruleCount = await prisma.availabilityRule.count({ where: { eventTypeId: existing.id } });
+      if (ruleCount === 0) {
+        throw Errors.unprocessable("Add availability before publishing.", {
+          availability: "At least one availability window is required",
+        });
+      }
     }
     const updated = await prisma.eventType.update({
       where: { id: existing.id },
@@ -85,6 +99,16 @@ router.delete("/:id", async (req: AuthedRequest, res, next) => {
   } catch (e) { next(e); }
 });
 
+// availability GET
+router.get("/:id/availability", async (req: AuthedRequest, res, next) => {
+  try {
+    const existing = await prisma.eventType.findFirst({ where: { id: String(req.params.id), userId: req.user!.id } });
+    if (!existing) throw Errors.notFound();
+    const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: existing.id } });
+    res.json(rules);
+  } catch (e) { next(e); }
+});
+
 // availability
 router.put("/:id/availability", async (req: AuthedRequest, res, next) => {
   try {
@@ -98,7 +122,7 @@ router.put("/:id/availability", async (req: AuthedRequest, res, next) => {
     })).parse(req.body);
     // validate ranges
     for (const r of rules) {
-      if (r.startLocal >= r.endLocal) throw Errors.validation("start must be before end", { availability: "invalid range" });
+      if (r.startLocal >= r.endLocal) throw Errors.unprocessable("End time must be after start time.", { availability: "invalid range" });
     }
     // reject overlaps within same weekday
     const byDay = new Map<number, typeof rules>();
@@ -110,13 +134,13 @@ router.put("/:id/availability", async (req: AuthedRequest, res, next) => {
       for (let i = 0; i < rs.length; i++) {
         for (let j = i + 1; j < rs.length; j++) {
           if (rs[i].startLocal < rs[j].endLocal && rs[j].startLocal < rs[i].endLocal) {
-            throw Errors.validation("overlapping ranges", { availability: "overlap" });
+            throw Errors.unprocessable("Availability windows must not overlap.", { availability: "overlap" });
           }
         }
       }
     }
     await prisma.availabilityRule.deleteMany({ where: { eventTypeId: existing.id } });
-    const created = await prisma.availabilityRule.createMany({
+    await prisma.availabilityRule.createMany({
       data: rules.map((r) => ({
         eventTypeId: existing.id,
         weekday: r.weekday,

@@ -13,21 +13,10 @@ export async function register(email: string, password: string) {
   const user = await prisma.user.create({
     data: { email, passwordHash, role: "owner" },
   });
-  // email verification token
+  // Email verification token. The 7-table schema has no dedicated table, so the
+  // hash lives in `sessions` and the raw token is prefixed `verify:` to keep it
+  // distinguishable from a real session token (see docs/DECISIONS.md).
   const raw = randomToken();
-  const tokenHash = hashToken(raw);
-  // store in sessions? Use a lightweight approach: store token hash in a management_tokens-like row? 
-  // Simpler: store verification token as a session with a marker? Instead, use a dedicated table would be ideal.
-  // For MVP, store the hashed token in a new row in sessions with revokedAt null and a far-future expiry? 
-  // We'll reuse a simple in-memory map is not durable. Use outbox? 
-  // Decision: store verification token in `sessions` table is wrong. Add a column? Schema has no verification_tokens table.
-  // Use management_tokens? Not linked to booking. 
-  // Pragmatic: store hashed token in user? No column. 
-  // We'll create a verification token row by reusing sessions with a special prefix is hacky.
-  // Instead, log the raw token and store hash in a new table via raw SQL? Schema fixed at 7 tables.
-  // Compromise: store verification token hash in `sessions.token_hash` with user_id and expires_at, marked by a role? 
-  // We'll store it and treat any session row whose token matches and not revoked as a verification token lookup.
-  // To distinguish, prefix raw token with "verify:".
   const verifyRaw = `verify:${raw}`;
   await prisma.session.create({
     data: {
