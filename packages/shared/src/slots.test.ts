@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateSlots } from "./slots";
+import { generateSlots, labelCacheStats, MAX_SLOT_RANGE_DAYS } from "./slots";
 
 describe("generateSlots", () => {
   it("generates slots for a weekday within availability", () => {
@@ -144,5 +144,39 @@ describe("generateSlots", () => {
       existingBookings: [],
     });
     expect(slots.length).toBeGreaterThan(0);
+  });
+
+  it("memoises labels without changing them, and keeps the cache bounded", () => {
+    const rules = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, startLocal: "00:00", endLocal: "23:59" }));
+    const input = {
+      rules,
+      durationMinutes: 30,
+      eventTimezone: "UTC",
+      displayTimezone: "Asia/Kathmandu",
+      from: new Date("2026-06-01T00:00:00Z"),
+      to: new Date("2026-06-08T00:00:00Z"),
+      existingBookings: [],
+    };
+
+    const first = generateSlots(input);
+    const afterFirst = labelCacheStats();
+    const second = generateSlots(input);
+    const afterSecond = labelCacheStats();
+
+    // A full week of 30-minute slots, all with distinct instants.
+    expect(first.length).toBeGreaterThan(300);
+    // Second pass returns byte-identical labels...
+    expect(second.map((s) => s.label)).toEqual(first.map((s) => s.label));
+    // ...and every label was a cache hit, so the cache did not grow.
+    expect(afterSecond.size).toBe(afterFirst.size);
+    // The cache is a bounded structure, not an unbounded map.
+    expect(afterFirst.size).toBeLessThanOrEqual(afterFirst.limit);
+    expect(afterFirst.limit).toBe(20_000);
+    // Labels remain the exact date-fns-compatible format.
+    expect(first[0].label).toMatch(/^Mon 1 Jun, 5:45 AM$/);
+  });
+
+  it("exposes the documented maximum request range", () => {
+    expect(MAX_SLOT_RANGE_DAYS).toBe(31);
   });
 });

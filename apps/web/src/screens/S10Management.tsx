@@ -7,6 +7,7 @@ import { Alert } from "../components/Alert";
 import { StatusBadge } from "../components/StatusBadge";
 import { ApiError, getBookingByToken, cancelBooking, rescheduleBooking, getSlots } from "../lib/api";
 import type { Booking, Slot } from "../lib/types";
+import { MAX_SLOT_RANGE_DAYS } from "@slotwise/shared";
 
 function dateInZone(iso: string, tz: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(
@@ -54,7 +55,9 @@ export default function S10Management() {
     setError(null);
     try {
       const base = new Date(`${date}T00:00:00Z`).getTime();
-      const all = await getSlots(booking.eventSlug, new Date(base - 86_400_000).toISOString(), new Date(base + 2 * 86_400_000).toISOString(), tz);
+      // 3-day window, clamped to the API's documented maximum (MAX_SLOT_RANGE_DAYS).
+      const to = new Date(Math.min(base + 2 * 86_400_000, base + MAX_SLOT_RANGE_DAYS * 86_400_000)).toISOString();
+      const all = await getSlots(booking.eventSlug, new Date(base - 86_400_000).toISOString(), to, tz);
       setSlots(all.filter((s) => dateInZone(s.startAt, tz) === date));
     } catch (err) {
       setError(err instanceof ApiError ? err.userMessage : "Could not load times.");

@@ -1,9 +1,17 @@
 # TEST_REPORT.md — M6 (test & bug-fix)
 
-Scope: the M6 gate. Everything below was **executed on 2026-10-28** on the
-development machine against a real PostgreSQL database, with the real API and the
-real SPA. No test is skipped, no assertion is disabled, and no suite is mocked
-except where a unit test deliberately isolates a module (stated in place).
+Scope: the M6 gate, re-run after the Gate 4 conditions (NFR-01 optimisation,
+31-day slot-range cap, Node 22 CI). Everything below was **executed on
+2026-10-28** on the development machine against a real PostgreSQL database, with
+the real API and the real SPA. No test is skipped, no assertion is disabled, and
+no suite is mocked except where a unit test deliberately isolates a module
+(stated in place).
+
+**Database label.** Every result in this report was produced against **local
+PostgreSQL 18.3** on the development machine. Nothing here is Neon evidence.
+`pnpm verify:neon` — despite its name — ran its six steps against that same local
+database; it becomes Neon evidence only when `DATABASE_URL` points at a Neon host
+and it prints 6/6 PASS there (DEV-13, §11).
 
 What this report does **not** claim: that GitHub Actions has run the committed
 pipeline (no CI execution has been observed yet — see §10), or that anything has
@@ -42,21 +50,23 @@ All commands are the root `package.json` scripts, run from the repository root.
 | --- | --- | --- | --- | --- |
 | Lint | `pnpm lint` | 3 packages | — | **PASS** (0 errors, 0 warnings) |
 | Typecheck | `pnpm typecheck` | 3 packages | — | **PASS** |
-| Build | `pnpm build` | web + api | — | **PASS** (api bundle 61.9 kB, web 201.28 kB / 62.93 kB gzip) |
-| Unit | `pnpm test:unit` | 8 | **38** | **PASS** (shared 8, api 25, web 5) |
-| Integration | `pnpm test:integration` | 6 | **44** | **PASS** |
+| Build | `pnpm build` | web + api | — | **PASS** (web 201.34 kB / 62.95 kB gzip) |
+| Unit | `pnpm test:unit` | 8 | **40** | **PASS** (shared 10, api 25, web 5) |
+| Integration | `pnpm test:integration` | 6 | **46** | **PASS** |
 | Security | `pnpm test:security` | 1 | **16** | **PASS** |
 | Concurrency | `pnpm test:concurrency` | 1 | **2** | **PASS** |
-| E2E | `pnpm test:e2e --retries=0` | 4 | **15** | **PASS** (1.9 min) |
+| E2E | `pnpm test:e2e --retries=0` | 4 | **15** | **PASS** (1.8 min) |
 | Dependency audit | `pnpm audit --audit-level=high` | — | — | **PASS** (0 critical, 0 high; 3 moderate accepted, §12) |
-| Database verification | `pnpm verify:neon` | — | 6 steps | **PASS** 6/6 in 68.6 s |
+| Database verification | `pnpm verify:neon` | — | 6 steps | **PASS** 6/6 in 68.6 s — **against local PG 18.3, not Neon** |
 | Performance | `pnpm perf --autocannon` | — | 2 endpoints | **PASS** (§9) |
 
 `--retries=0` is used for the E2E run on purpose: a green run must be a first-try
 green run. (CI keeps Playwright's `retries=1` and uploads traces on failure.)
 
-Total: **115 automated tests** (38 + 44 + 16 + 2 + 15), all passing, plus the
-six-step database verification and the load harness.
+Total: **119 automated tests** (40 + 46 + 16 + 2 + 15), all passing, plus the
+six-step database verification and the load harness. The count rose from 115 at
+the M6 gate to 119 with the four Gate 4 regression tests (`F01-E2` range cap,
+`F02-H3` windowed-booking query, two shared label-cache/limit unit tests).
 
 ---
 
@@ -89,11 +99,11 @@ F03-H1, F03-E1, F03-N1, F03-H2.
 
 ---
 
-## 4. Unit tests — 38
+## 4. Unit tests — 40
 
 | File | Tests | What it pins |
 | --- | --- | --- |
-| `packages/shared/src/slots.test.ts` | 7 | Slot generation: grid alignment, DST spring-forward/fall-back, min notice, horizon, cancelled/free slots, label formatting |
+| `packages/shared/src/slots.test.ts` | 9 | Slot generation: grid alignment, DST spring-forward/fall-back, min notice, horizon, cancelled/free slots, label formatting, label memoisation + bounded cache, `MAX_SLOT_RANGE_DAYS = 31` |
 | `packages/shared/src/index.test.ts` | 1 | Shared exports/constants |
 | `apps/api/src/lib/clock.test.ts` | 6 | Injectable clock: default is real time, `setClock`/`resetClock`, `now()` monotonic use in slots, restore on reset |
 | `apps/api/src/lib/logger.test.ts` | 5 | JSON shape, `req.id`, redaction of `authorization`/`cookie`/`x-csrf-token`/`x-worker-secret`/`set-cookie`/`password`/`token`, silence under `NODE_ENV=test` |
@@ -116,11 +126,11 @@ the wall clock and start failing in January 2027.
 
 ---
 
-## 5. Integration tests — 44 (real PostgreSQL, real migrations, no mocks)
+## 5. Integration tests — 46 (real PostgreSQL, real migrations, no mocks)
 
 | File | Tests | Coverage |
 | --- | --- | --- |
-| `flows.test.ts` | 14 | The Gate 3 ID list: happy/error/negative for auth, event types, availability and public booking |
+| `flows.test.ts` | 16 | The Gate 3 ID list: happy/error/negative for auth, event types, availability and public booking, plus `F01-E2` (32/40-day window → 422, 31 days → 200) and `F02-H3` (a booking that started before the window still blocks the slots inside it) |
 | `auth.test.ts` | 7 | Register → verify → login → logout, session revocation, duplicate email, weak password, unverified login refused, reset flow |
 | `timezone.test.ts` | 7 | DST spring-forward/fall-back, host≠invitee zones, pinned-clock window, invalid zone → 422 |
 | `outbox.test.ts` | 5 | Job exists only if the booking transaction committed; retry with exponential backoff; bounded attempts; `FOR UPDATE SKIP LOCKED` polling |
@@ -271,7 +281,7 @@ window, so it is the expensive endpoint by construction.
 p50/p75/p90/p97_5/p99 and no p95 key. `--autocannon` is therefore an independent
 cross-check at p97_5 (a *stricter* percentile), not the NFR measurement.
 
-### Measurements (7 runs, same code and profile, same machine)
+### Measurements (7 runs, same code and profile, same machine) — M6 baseline, before the Gate 4 optimisation
 
 | Run (UTC) | `/public/:slug` p95 | rps | `/slots` p95 | rps | `/slots` p99 / max | Result |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -289,33 +299,61 @@ p97_5 **626 ms**, p99 1018 ms, max 1051 ms, 0 errors.
 
 ### 9.1 Verdict
 
-NFR-01 **passes** on the stated profile: 5 of 6 valid runs, and every run of the
-final code state, put `/slots` p95 at 384–415 ms and `/public/:slug` p95 at
-69–77 ms, with zero errors and zero non-2xx responses.
+NFR-01 **passes** on the stated profile, with real headroom after the Gate 4
+optimisation (see §9.4): three consecutive runs put `/slots` p95 at **184.6 /
+212.0 / 210.7 ms** — 37–42 % of the 500 ms budget — and `/public/:slug` p95 at
+59.5 / 61.7 / 65.9 ms, with zero errors, zero non-2xx and zero timeouts.
+
+The M6 baseline (table above) sat at 384–415 ms, i.e. ~80 % of the budget, which
+Gate 4 rejected as thin. Both tables are kept so the improvement is auditable
+rather than asserted.
 
 Honest caveats, in order of importance:
 
-1. **Headroom is thin.** `/slots` p95 sits at ~80 % of the 500 ms budget. One
-   contended run measured 1125 ms. NFR-01 is met, not comfortably met.
-2. **The load generator shares the machine with the server.** Both are on one
+1. **The load generator shares the machine with the server.** Both are on one
    8-thread laptop with a browser and an editor resident; the CPU is also running
    the closed-loop client. A dedicated load host would report lower numbers, not
    higher — but this is not a controlled benchmark.
-3. **autocannon's p97_5 for `/slots` (626 ms) exceeds 500 ms** in the final run
-   while the exact p95 (410.6 ms) does not. p97_5 is the stricter percentile of a
-   different sampler with a different connection pattern; the NFR is written as
-   p95 and is answered by the harness. Both facts are reported rather than
-   picking the flattering one.
+2. **Neon network latency is not included.** These numbers are local PostgreSQL
+   18.3 over loopback. Once Neon is connected, every slots request adds a network
+   round trip to the database, so NFR-01 must be re-measured against the Neon host
+   before the number is used in the report or in a deployment decision.
+3. **autocannon's p97_5 for `/slots` was 488 ms in run 1** (190 ms and 194 ms in
+   runs 2 and 3) while the exact p95 never exceeded 212 ms. p97_5 is the stricter
+   percentile of a different sampler with a different connection pattern; the NFR
+   is written as p95 and is answered by the harness. Both facts are reported
+   rather than picking the flattering one.
 4. **Only read endpoints are load-tested.** The booking write path is covered for
    correctness and concurrency, not for latency under load.
 
 ### 9.2 What was optimised
 
-The first measurement of `/slots` failed (p95 567 ms). Profiling the generator
-showed 7.63 ms per call in `packages/shared/src/slots.ts` — it built a fresh
-`Intl.DateTimeFormat` per label. Caching the formatter and using
-`formatToParts` brought it to **2.84 ms/call** (2.7×). A byte-for-byte regression
-test compares 7,424 labels across 8 zones against the old implementation: 0 diffs.
+**M6 — label formatting.** The first measurement of `/slots` failed (p95 567 ms).
+Profiling the generator showed 7.63 ms per call in
+`packages/shared/src/slots.ts` — it built a fresh `Intl.DateTimeFormat` per label.
+Caching the formatter and using `formatToParts` brought it to **2.84 ms/call**
+(2.7×). A byte-for-byte regression test compares 7,424 labels across 8 zones
+against the old implementation: 0 diffs.
+
+**Gate 4 — the CPU profile, then three fixes.** Gate 4 rejected ~20 % headroom,
+so the endpoint was profiled under load (V8 `--cpu-prof`, autocannon 20
+connections / 15 s, 67 rps, p50 310 ms). Self time, excluding idle:
+
+| Function | Share of CPU | Fix |
+| --- | --- | --- |
+| `formatLabel` | 21.2 % | Memoise the rendered label per `(zone, instant)` in a bounded cache (20,000 entries, cleared wholesale when full). Same policy as the formatter cache; a miss recomputes the identical string, which the 7,424-label test pins. |
+| `generateSlots` | 9.0 % | Unchanged — real work. |
+| `partsOffset` | 3.0 % | Unchanged (date-fns-tz internals). |
+| `isIanaZone` | 2.0 % | Remember zones that have already been validated (bounded at 500) instead of constructing a `DateTimeFormat` on every request. |
+| `JSON.stringify` | 1.1 % | Unchanged. |
+
+The fourth change is not CPU work but query work: the slots route used to load
+**every** confirmed booking the host had ever taken. It now loads only bookings
+that can overlap the requested window, in one query, selecting three columns
+(DEV-25), and the window itself is capped at 31 days (DEV-24).
+
+Result: `/slots` p95 **410.6 → 184.6–212.0 ms** and throughput **51.7 → 121–126
+rps** on the same machine, same profile, same fixture (328 slots / 33.2 KiB).
 
 ### 9.3 Two failed runs, kept as evidence
 
@@ -335,18 +373,54 @@ timeout (`--request-timeout-ms`, default 30 s), a `timeouts` counter that fails 
 run, and a stall guard that fails a run which overshoots `duration + 60 s` with a
 message saying the percentiles are not a latency measurement.
 
+### 9.4 Gate 4 re-measurement — three consecutive runs, none dropped
+
+Identical profile to the baseline (`pnpm perf --autocannon`: 20 connections,
+closed loop, 5 s warm-up + 20 s per endpoint, `NODE_ENV=production`, raised rate
+limits, fixture `perf-load-test`, 328 slots / 33.2 KiB). Machine state is the
+`Get-CimInstance Win32_OperatingSystem` free-RAM figure and the sampled CPU load
+taken immediately before each run.
+
+| Run (UTC start) | Free RAM before | CPU load before | `/public/:slug` p95 | rps | `/slots` p95 | rps | `/slots` p99 / max | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 09:12:12 | 463 MB / 7,877 MB | 20 % | 59.5 ms | 484.1 | **184.6 ms** | 125.5 | 193.2 / 212.2 ms | PASS |
+| 09:13:52 | 738 MB / 7,877 MB | 17 % | 61.7 ms | 490.6 | **212.0 ms** | 120.9 | 266.3 / 340.3 ms | PASS |
+| 09:15:28 | 862 MB / 7,877 MB | 17 % | 65.9 ms | 485.4 | **210.7 ms** | 121.2 | 246.7 / 395.2 ms | PASS |
+
+All three: 0 errors, 0 non-2xx, 0 timeouts, 20.0–20.1 s per endpoint.
+
+autocannon cross-check (p97_5, **not** p95 — DEV-14):
+
+| Run | `/public/:slug` rps / p97_5 | `/slots` rps / p97_5 / p99 / max |
+| --- | --- | --- |
+| 1 | 465.6 / 74 ms | 111.2 / **488 ms** / 559 / 684 ms |
+| 2 | 485.5 / 61 ms | 126.0 / 190 ms / 201 / 214 ms |
+| 3 | 530.8 / 53 ms | 124.0 / 194 ms / 224 / 234 ms |
+
+Artifacts: `docs/perf/load-2026-10-28T09-13-47-858Z.json`,
+`…T09-15-25-715Z.json`, `…T09-17-01-856Z.json`.
+
+Run 1's autocannon p97_5 (488 ms) is the only number in this set that approaches
+the budget; its harness p95 was 184.6 ms and its autocannon p50 was 157 ms. The
+gap between the two samplers on the same run is reported rather than smoothed
+over.
+
+**Neon caveat, stated once more:** none of these numbers include network latency
+to a managed database. They are loopback measurements against local PostgreSQL
+18.3. NFR-01 must be re-measured after Neon is connected (DEV-13).
+
 ---
 
 ## 10. CI pipeline (`.github/workflows/ci.yml`)
 
-Seven jobs on `ubuntu-latest`, Node 20, pnpm 12, each installing from the frozen
-lockfile:
+Seven jobs on `ubuntu-latest`, **Node 22**, pnpm 12, each installing from the
+frozen lockfile:
 
 | Job | Needs | What it runs |
 | --- | --- | --- |
 | `lint-typecheck` | — | `pnpm lint`, `pnpm typecheck`, `pnpm build` |
-| `unit` | lint-typecheck | `pnpm test:unit` (38) |
-| `integration` | unit | `postgres:16` service → `prisma migrate deploy` → `verify:constraint` → `pnpm test:integration` (44) |
+| `unit` | lint-typecheck | `pnpm test:unit` (40) |
+| `integration` | unit | `postgres:16` service → `prisma migrate deploy` → `verify:constraint` → `pnpm test:integration` (46) |
 | `security` | integration | `postgres:16` → migrate → `pnpm test:security` (16) |
 | `concurrency` | security | `postgres:16` → migrate → `pnpm test:concurrency` (2) |
 | `e2e` | concurrency | `postgres:16` → migrate → Chromium → `pnpm test:e2e` (15); traces uploaded on failure |
@@ -358,10 +432,11 @@ API on the same database, so the pipeline reproduces this report's shape on Linu
 with PostgreSQL 16.
 
 **Honest limitation:** no GitHub Actions run has been observed. The workflow is
-committed and every command it runs has been executed locally (except that CI uses
-Node 20 and `postgres:16` while this machine uses Node 22.16 and PostgreSQL 18.3).
-The first push will be the pipeline's first real test; a red job must be fixed,
-not deleted.
+committed and every command it runs has been executed locally. Since the Gate 4
+condition, CI runs Node 22 (was 20) — the same major as this machine's 22.16 — and
+the root `package.json` declares `engines.node >= 22`; the remaining difference is
+PostgreSQL 16 in CI vs 18.3 here. The first push will be the pipeline's first real
+test; a red job must be fixed, not deleted.
 
 ---
 
@@ -371,6 +446,11 @@ not deleted.
 (`host type LOCAL`, 54 chars, mtime `2026-10-27T08:45:33Z`). No Neon database has
 been migrated, probed or tested. Everything in this report was produced against
 local PostgreSQL 18.3, and CI will use `postgres:16`.
+
+For the avoidance of doubt: the "PASS 6/6 in 68.6 s" in §2 and §8 is
+`pnpm verify:neon` executed **against local PostgreSQL 18.3**. The script is the
+Neon verification harness, but the host it verified was not Neon. It must be
+re-run against a Neon host before the result can be called Neon evidence.
 
 This remains a **HARD blocker before M10**: the owner must put the Neon direct
 (non-pooled) URL in `.env` and run `pnpm verify:neon` to get 6/6 PASS. The script
@@ -390,12 +470,12 @@ critical, 3 high. All were fixed rather than muted (DEV-19):
 | zod < 4.6.6 — memory exhaustion on oversized constrained collections (high) | `apps/api`, `packages/shared` | zod 3.25.76 → **4.6.7**; all suites re-run green |
 | deepmerge-ts < 8.0.0 — stack exhaustion (high) | `prisma > @prisma/config` | `overrides: deepmerge-ts ^8.0.2` in `pnpm-workspace.yaml`; verified by `prisma generate`, `migrate deploy`, `verify:constraint`, `seed:perf` |
 
-Remaining (below the `high` gate, accepted with rationale):
+Remaining (below the `high` gate, **accepted at Gate 4** with rationale — DEV-23):
 
 | Severity | Advisory | Why accepted | Action |
 | --- | --- | --- | --- |
 | moderate | `uuid < 11.1.1` — missing bounds check in v3/v5/v6 with a `buf` | Transitive dev-only dependency; the API never calls uuid with a caller-supplied buffer | Revisit at M10 |
-| moderate | `react-router` — open redirect via backslash in `<Link>`/`useNavigate` | SPA-only; navigation targets are internal routes, not user-supplied URLs; no SSR, so the `deserializeErrors()` advisory does not apply | Upgrade to v7 at M7/M10 (major) |
+| moderate ×2 | `react-router` — open redirect via backslash in `<Link>`/`useNavigate`; `deserializeErrors()` | SPA-only; navigation targets are internal routes, not user-supplied URLs; no SSR, so the `deserializeErrors()` advisory does not apply | Upgrade to v7 after M10 (major) — tracked in the M7 gap list |
 
 ---
 
@@ -411,6 +491,10 @@ Remaining (below the `high` gate, accepted with rationale):
 | DEV-19 | Vitest 4, zod 4 and a `deepmerge-ts` override to clear `pnpm audit --audit-level=high`. |
 | DEV-20 | Load harness hardened with a per-request timeout, a `timeouts` counter and a stall guard after the 07:27 incident. |
 | DEV-21 | NFR-01 is reported as a distribution of runs on a contended host, not as a single number; one contention outlier (1125 ms) is published next to the passing runs. |
+| DEV-22 | CI moved to Node 22 in all seven jobs and the root `package.json` declares `engines.node >= 22`; `postgres:16` service containers unchanged. |
+| DEV-23 | The 3 remaining moderate audit advisories are accepted (below the `high` gate): `uuid` is dev-only, `react-router` 7 is a major refactor of all screens and is deferred to after M10. |
+| DEV-24 | `/public/:slug/slots` is capped at 31 days (422 + `fieldErrors.to`); `MAX_SLOT_RANGE_DAYS` is shared so the API limit and both web call sites cannot drift. |
+| DEV-25 | The slots read path fetches the window's bookings in one filtered query (3 columns) and generates in memory; no index was added because `EXPLAIN` shows an existing index scan and no seq scan (see §9.4). |
 
 ---
 
@@ -420,14 +504,13 @@ Remaining (below the `high` gate, accepted with rationale):
 - **Neon unverified** (§11, DEV-13) — hard blocker before M10.
 - **Chromium only.** No Firefox/WebKit run; no real mobile device, only emulated
   viewports (390/768/1024/1440 + 640×360).
-- **Performance measured on a shared laptop** (§9.1), read endpoints only, and
-  `/slots` p95 sits at ~80 % of the NFR budget.
+- **Performance measured on a shared laptop** (§9.1), read endpoints only; and it
+  excludes Neon network latency, which must be re-measured after Neon is connected
+  (§9.4).
 - **Rate limits are raised** for E2E and perf (DEV-11); the real limits are proven
   by the security suite instead.
 - **No PITR / off-host restore drill** (`docs/DEPLOYMENT.md` §7); logical dumps
   only.
-- **Node version split**: CI runs Node 20, development runs Node 22.16. Worth
-  aligning before M10 so the tested runtime is the shipped runtime.
 - **Coverage is not measured** (no coverage tool configured); the suites are
   requirement-driven, not percentage-driven.
 
@@ -441,8 +524,8 @@ pnpm --filter @slotwise/api prisma:generate
 pnpm db:migrate:deploy            # or prisma:migrate for a dev database
 
 pnpm lint && pnpm typecheck && pnpm build
-pnpm test:unit                    # 38
-pnpm test:integration             # 44
+pnpm test:unit                    # 40
+pnpm test:integration             # 46
 pnpm test:security                # 16
 pnpm test:concurrency             # 2
 pnpm test:e2e --retries=0         # 15, boots web + api itself

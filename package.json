@@ -5,7 +5,7 @@
   "description": "Slotwise — focused single-host scheduling MVP (final-year project).",
   "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "workspaces": [
     "apps/*",

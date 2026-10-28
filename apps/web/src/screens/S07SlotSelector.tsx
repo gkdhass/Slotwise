@@ -5,6 +5,7 @@ import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
 import { ApiError, getEventTypeBySlug, getSlots } from "../lib/api";
 import type { Slot } from "../lib/types";
+import { MAX_SLOT_RANGE_DAYS } from "@slotwise/shared";
 
 type InviteeDraft = { name: string; email: string; note: string };
 
@@ -74,10 +75,11 @@ export default function S07SlotSelector() {
     setLoading(true);
     setError(null);
     // Query a 3-day window so any zone offset is covered, then filter to the
-    // chosen date in the event's time zone.
+    // chosen date in the event's time zone. The window is clamped to the API's
+    // documented maximum (MAX_SLOT_RANGE_DAYS) so client and server cannot drift.
     const base = new Date(`${date}T00:00:00Z`).getTime();
     const from = new Date(base - 86_400_000).toISOString();
-    const to = new Date(base + 2 * 86_400_000).toISOString();
+    const to = new Date(Math.min(base + 2 * 86_400_000, base + MAX_SLOT_RANGE_DAYS * 86_400_000)).toISOString();
     getSlots(slug, from, to, tz)
       .then((all) => {
         if (cancelled) return;

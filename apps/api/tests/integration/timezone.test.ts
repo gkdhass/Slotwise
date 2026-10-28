@@ -265,6 +265,7 @@ describe("time zones at the API level", () => {
       .get(`/api/v1/public/${ev.slug}/slots`)
       .query({ from: "2027-06-07T00:00:00.000Z", to: "2027-12-07T00:00:00.000Z", tz: "UTC" });
     expect(tooLong.status).toBe(422);
-    expect(tooLong.body.error.message).toMatch(/62 days/i);
+    expect(tooLong.body.error.message).toMatch(/31 days/i);
+    expect(tooLong.body.error.fieldErrors.to).toBeTruthy();
   });
 });

@@ -12,6 +12,7 @@ import {
   request,
   uniqueEmail,
 } from "./helpers.js";
+import type { Slot } from "./helpers.js";
 
 const createdUserIds: string[] = [];
 const track = (id: string) => {
@@ -185,6 +186,34 @@ describe("F01 event management", () => {
     expect(stored.archivedAt).toBeNull();
     expect(stored.isPublished).toBe(true);
   });
+  it("F01-E2: a slots request longer than 31 days is refused with a clear message", async () => {
+    const { agent, userId } = await createOwner({ prefix: "f01e2" });
+    track(userId);
+    const ev = await createEvent(agent, { title: "Range cap" });
+    const from = new Date(Date.now() + 86_400_000);
+
+    const ask = (days: number) =>
+      request(app)
+        .get(`/api/v1/public/${ev.slug}/slots`)
+        .query({
+          from: from.toISOString(),
+          to: new Date(from.getTime() + days * 86_400_000).toISOString(),
+          tz: "UTC",
+        });
+
+    const tooLong = await ask(40);
+    expect(tooLong.status).toBe(422);
+    expect(tooLong.body.error.code).toBe("UNPROCESSABLE");
+    expect(tooLong.body.error.message).toMatch(/31 days or less/i);
+    expect(tooLong.body.error.fieldErrors.to).toBeTruthy();
+
+    // Just over the documented maximum is already refused (the old limit was 62).
+    expect((await ask(32)).status).toBe(422);
+    // The documented maximum itself is still served.
+    const atLimit = await ask(31);
+    expect(atLimit.status).toBe(200);
+    expect(Array.isArray(atLimit.body)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -294,6 +323,34 @@ describe("F02 public booking", () => {
     expect(await prisma.booking.count({ where: { userId: userId } })).toBe(1);
     const jobs = await prisma.outboxJob.count({ where: { booking: { userId: userId } } });
     expect(jobs).toBe(1);
+  });
+
+  it("F02-H3: a booking that starts before the window still blocks slots inside it", async () => {
+    const { agent, userId } = await createOwner({ prefix: "f02h3" });
+    track(userId);
+    // Two event types for the same host: a 60-minute one already booked, and a
+    // 30-minute one being viewed. "No host overlap" applies across both, so the
+    // slots query must see bookings that merely overlap the window.
+    const blocking = await createEvent(agent, { title: "Blocking", durationMinutes: 60 });
+    const viewing = await createEvent(agent, { title: "Viewing", durationMinutes: 30 });
+    const taken = await firstSlot(blocking.slug);
+    const booked = await book(blocking.slug, taken, { email: uniqueEmail("window") });
+    expect(booked.status).toBe(201);
+
+    // The window opens 30 minutes after the booking started, so the booking's
+    // startAt lies outside the window while its endAt lies inside it.
+    const from = new Date(new Date(taken.startAt).getTime() + 30 * 60_000);
+    const res = await request(app)
+      .get(`/api/v1/public/${viewing.slug}/slots`)
+      .query({ from: from.toISOString(), to: new Date(from.getTime() + 86_400_000).toISOString(), tz: "UTC" });
+    expect(res.status).toBe(200);
+    const starts = (res.body as Slot[]).map((s) => s.startAt);
+
+    // The 30-minute slot overlapping the tail of the booking is excluded...
+    expect(starts).not.toContain(from.toISOString());
+    // ...and the slot at the booking's end is offered, so the windowed query
+    // returned the booking that began before the window rather than over-filtering.
+    expect(starts).toContain(taken.endAt);
   });
 });
 

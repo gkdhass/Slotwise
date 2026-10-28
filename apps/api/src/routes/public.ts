@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
-import { generateSlots } from "@slotwise/shared";
+import { generateSlots, MAX_SLOT_RANGE_DAYS } from "@slotwise/shared";
 import { now } from "../lib/clock.js";
 import { randomToken, hashToken } from "../lib/hash.js";
 import { rateLimit } from "../middleware/rateLimit.js";
@@ -12,9 +12,18 @@ const router: Router = Router();
 const slotsLimiter = rateLimit({ name: "slots", windowMs: 60_000, max: 120 });
 const bookingLimiter = rateLimit({ name: "booking", windowMs: 60_000, max: 20 });
 
+/**
+ * `isIanaZone` constructs an `Intl.DateTimeFormat`, which costs ~0.5 ms — 2 % of
+ * the slots endpoint's CPU when it runs on every request. The set of valid zones
+ * is small and fixed, so validated zones are remembered.
+ */
+const VALID_ZONES = new Set<string>();
+
 function isIanaZone(tz: string): boolean {
+  if (VALID_ZONES.has(tz)) return true;
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    if (VALID_ZONES.size < 500) VALID_ZONES.add(tz);
     return true;
   } catch {
     return false;
@@ -49,9 +58,23 @@ router.get("/:slug/slots", slotsLimiter, async (req, res, next) => {
     const toDate = new Date(to);
     if (!(fromDate < toDate)) throw Errors.unprocessable("`to` must be after `from`.");
     const spanDays = (toDate.getTime() - fromDate.getTime()) / 86_400_000;
-    if (spanDays > 62) throw Errors.unprocessable("Date range must be 62 days or less.");
+    if (spanDays > MAX_SLOT_RANGE_DAYS) {
+      throw Errors.unprocessable(`Date range must be ${MAX_SLOT_RANGE_DAYS} days or less.`, {
+        to: `Request ${MAX_SLOT_RANGE_DAYS} days or fewer`,
+      });
+    }
     const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: ev.id } });
-    const bookings = await prisma.booking.findMany({ where: { userId: ev.userId, status: "confirmed" } });
+    // One query for the whole window. Only bookings that can overlap a candidate
+    // slot matter, so the host's entire history is not loaded into memory.
+    const bookings = await prisma.booking.findMany({
+      where: {
+        userId: ev.userId,
+        status: "confirmed",
+        startAt: { lt: toDate },
+        endAt: { gt: fromDate },
+      },
+      select: { startAt: true, endAt: true, status: true },
+    });
     const slots = generateSlots({
       rules: rules.map((r) => ({ weekday: r.weekday, startLocal: r.startLocal, endLocal: r.endLocal })),
       durationMinutes: ev.durationMinutes,
@@ -104,8 +127,17 @@ router.post("/:slug/bookings", bookingLimiter, async (req, res, next) => {
     const endAt = new Date(startAt.getTime() + ev.durationMinutes * 60000);
 
     const rules = await prisma.availabilityRule.findMany({ where: { eventTypeId: ev.id } });
-    // No host overlap across event types: consider every confirmed booking for the host.
-    const bookings = await prisma.booking.findMany({ where: { userId: ev.userId, status: "confirmed" } });
+    // No host overlap across event types: consider every confirmed booking for the
+    // host that can overlap this one slot — not the host's entire booking history.
+    const bookings = await prisma.booking.findMany({
+      where: {
+        userId: ev.userId,
+        status: "confirmed",
+        startAt: { lt: endAt },
+        endAt: { gt: startAt },
+      },
+      select: { startAt: true, endAt: true, status: true },
+    });
     const existingBookings = bookings.map((b) => ({
       startAt: b.startAt.toISOString(),
       endAt: b.endAt.toISOString(),

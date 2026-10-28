@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "startedAt": "2026-10-28T09:15:28.991Z",
+    "node": "v22.16.0",
+    "platform": "Windows_NT 10.0.26300 (win32 x64)",
+    "cpu": "12th Gen Intel(R) Core(TM) i3-1215U",
+    "cores": 8,
+    "memoryGb": 7.7,
+    "apiMode": "compiled bundle (node dist/server.js), NODE_ENV=production",
+    "loadGenerator": "node:http closed loop, per-request latency sampling (exact p95)",
+    "profile": {
+      "connections": 20,
+      "durationSeconds": 20,
+      "warmupSeconds": 5,
+      "thinkTime": "none"
+    },
+    "rateLimits": "raised for the measurement (RATE_LIMIT_*_MAX=1000000)",
+    "version": "PostgreSQL 18.3 on x86_64-windows, compiled by msvc-19.44.35223, 64-bit",
+    "database": "slotwise",
+    "dbTarget": "LOCAL"
+  },
+  "checks": [
+    {
+      "name": "GET /public/:slug",
+      "requests": 9723,
+      "ok": 9723,
+      "rps": 485.4,
+      "p50": 37.2,
+      "p95": 65.9,
+      "p99": 122.1,
+      "max": 194.5,
+      "mean": 41.1,
+      "non2xx": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "elapsedSeconds": 20
+    },
+    {
+      "name": "GET /public/:slug/slots",
+      "requests": 2440,
+      "ok": 2440,
+      "rps": 121.2,
+      "p50": 159.3,
+      "p95": 210.7,
+      "p99": 246.7,
+      "max": 395.2,
+      "mean": 164.4,
+      "non2xx": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "elapsedSeconds": 20.1
+    }
+  ],
+  "crossCheck": {
+    "slug": {
+      "requests": 10615,
+      "rps": 530.8,
+      "p50": 36,
+      "p95NotReported": "autocannon emits p97_5, not p95",
+      "p97_5": 53,
+      "p99": 68,
+      "max": 99,
+      "non2xx": 0,
+      "errors": 0
+    },
+    "slots": {
+      "requests": 2481,
+      "rps": 124,
+      "p50": 160,
+      "p95NotReported": "autocannon emits p97_5, not p95",
+      "p97_5": 194,
+      "p99": 224,
+      "max": 234,
+      "non2xx": 0,
+      "errors": 0
+    }
+  },
+  "nfr01": {
+    "metric": "p95",
+    "limitMs": 500,
+    "requestTimeoutMs": 30000,
+    "stallSlackSeconds": 60,
+    "pass": true
+  }
+}
