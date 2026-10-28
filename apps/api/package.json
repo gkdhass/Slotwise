@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b",
-    "start": "node dist/index.js",
+    "build": "tsc -b && node scripts/bundle.mjs",
+    "start": "node dist/server.js",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
@@ -16,6 +16,7 @@
     "verify:constraint": "tsx scripts/verify-constraint.ts",
     "test:security": "vitest run --config vitest.security.config.ts",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
+    "seed:perf": "tsx prisma/seed-perf.ts",
     "worker:email": "tsx src/worker/emailWorker.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
