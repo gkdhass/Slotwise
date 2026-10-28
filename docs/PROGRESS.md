@@ -3,14 +3,17 @@
 Last updated: 2026-10-27 (Phase 0).
 
 ## Current milestone
-M1 Vertical slice (mock) — complete on branch `m1-slice`. GATE 1 pending (demo walkthrough).
+M2–M4 complete on branch `m2-must-haves`. GATE 2 pending.
 
 ## Milestones
 | Milestone | Status | Notes |
 |---|---|---|
-| Phase 0 — Analysis & setup | Complete | Gate 0 approved (D-01 PostgreSQL, D-07 Render/Railway) |
-| M0 Shell | Complete | Routes S01–S11, tokens, primitives, mock data, real lint/typecheck/tests |
-| M1 Vertical slice (mock) | Complete | Core loop S02-S10 with mock layer; lint/typecheck/tests pass; build passes |
+| Phase 0 — Analysis & setup | Complete | Gate 0 approved |
+| M0 Shell | Complete | |
+| M1 Vertical slice (mock) | Complete | tag v0.1-mock |
+| M2 Must-haves (persistent) | Complete | Prisma + PG16/18, auth, events, availability, public, booking tx, outbox worker, concurrency test |
+| M3 Should-haves | Complete | management tokens, cancel/reschedule, filters |
+| M4 UX fixes | Complete | setup guidance, tz clarity, conflict recovery, policy preview |
 | M1 Vertical slice (mock) | Not started | |
 | M2 Must-haves (persistent) | Not started | |
 | M3 Should-haves | Not started | |

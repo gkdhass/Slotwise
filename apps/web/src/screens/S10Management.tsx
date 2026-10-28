@@ -88,7 +88,11 @@ export default function S10Management() {
         )}
         {rescheduling && (
           <div className="flex flex-col gap-3 rounded-md border border-border p-3">
+            <label htmlFor="resched-date" className="text-small font-medium text-text">
+              New date
+            </label>
             <input
+              id="resched-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}

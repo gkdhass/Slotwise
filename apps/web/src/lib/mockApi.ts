@@ -1,5 +1,5 @@
-import { format, addMinutes } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { addMinutes } from "date-fns";
+import { generateSlots } from "@slotwise/shared";
 import type {
   EventType,
   AvailabilityRule,
@@ -149,53 +149,17 @@ export async function getSlots(slug: string, from: string, to: string, tz: strin
   if (!ev || !ev.isPublished || ev.archived) return [];
   const rules = state.availability.filter((a) => a.eventTypeId === ev.id);
   const bookings = state.bookings.filter((b) => b.eventSlug === slug && b.status === "confirmed");
-  const slots: Slot[] = [];
-  const start = new Date(from);
-  const end = new Date(to);
-  const duration = ev.durationMinutes;
-  for (let d = new Date(start); d < end; d = addMinutes(d, 1440)) {
-    // iterate each day
-    const zoned = toZonedTime(d, ev.timezone);
-    const wd = zoned.getDay();
-    const dayRules = rules.filter((r) => r.weekday === wd);
-    for (const rule of dayRules) {
-      const [sh, sm] = rule.startLocal.split(":").map(Number);
-      const [eh, em] = rule.endLocal.split(":").map(Number);
-      // build local day start
-      const localDay = new Date(zoned);
-      localDay.setHours(sh, sm, 0, 0);
-      const localEnd = new Date(zoned);
-      localEnd.setHours(eh, em, 0, 0);
-      let cursor = fromZonedTime(localDay, ev.timezone);
-      const dayEnd = fromZonedTime(localEnd, ev.timezone);
-      while (addMinutes(cursor, duration) <= dayEnd) {
-        const slotStart = cursor;
-        const slotEnd = addMinutes(cursor, duration);
-        if (slotStart >= start && slotEnd <= end) {
-          // check not in past
-          if (slotStart.getTime() >= Date.now() - 60000) {
-            // check overlap with bookings
-            const conflict = bookings.some(
-              (b) =>
-                new Date(b.startAt).getTime() < slotEnd.getTime() &&
-                new Date(b.endAt).getTime() > slotStart.getTime(),
-            );
-            if (!conflict) {
-              slots.push({
-                startAt: slotStart.toISOString(),
-                endAt: slotEnd.toISOString(),
-                label: format(toZonedTime(slotStart, tz), "EEE d MMM, h:mm a"),
-              });
-            }
-          }
-        }
-        cursor = addMinutes(cursor, duration);
-      }
-    }
-  }
-  // dedupe by startAt
-  const seen = new Set<string>();
-  return slots.filter((s) => (seen.has(s.startAt) ? false : (seen.add(s.startAt), true)));
+  const sharedRules = rules.map((r) => ({ weekday: r.weekday, startLocal: r.startLocal, endLocal: r.endLocal }));
+  return generateSlots({
+    rules: sharedRules,
+    durationMinutes: ev.durationMinutes,
+    eventTimezone: ev.timezone,
+    displayTimezone: tz,
+    from: new Date(from),
+    to: new Date(to),
+    existingBookings: bookings.map((b) => ({ startAt: b.startAt, endAt: b.endAt, status: b.status })),
+    now: new Date(),
+  });
 }
 
 // ---------- Bookings ----------

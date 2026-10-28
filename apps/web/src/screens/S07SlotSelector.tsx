@@ -69,10 +69,14 @@ export default function S07SlotSelector() {
 }
 
 function InputDate({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const id = "slot-date";
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-small font-medium text-text">{label}</label>
+      <label htmlFor={id} className="text-small font-medium text-text">
+        {label}
+      </label>
       <input
+        id={id}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
