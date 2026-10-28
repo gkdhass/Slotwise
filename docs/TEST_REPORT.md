@@ -52,10 +52,10 @@ All commands are the root `package.json` scripts, run from the repository root.
 | Typecheck | `pnpm typecheck` | 3 packages | — | **PASS** |
 | Build | `pnpm build` | web + api | — | **PASS** (web 201.34 kB / 62.95 kB gzip) |
 | Unit | `pnpm test:unit` | 8 | **40** | **PASS** (shared 10, api 25, web 5) |
-| Integration | `pnpm test:integration` | 6 | **46** | **PASS** |
+| Integration | `pnpm test:integration` | 6 | **48** | **PASS** |
 | Security | `pnpm test:security` | 1 | **16** | **PASS** |
 | Concurrency | `pnpm test:concurrency` | 1 | **2** | **PASS** |
-| E2E | `pnpm test:e2e --retries=0` | 4 | **15** | **PASS** (1.8 min) |
+| E2E | `pnpm test:e2e --retries=0` | 4 | **16** | **PASS** (2.0-2.2 min, three consecutive runs) |
 | Dependency audit | `pnpm audit --audit-level=high` | — | — | **PASS** (0 critical, 0 high; 3 moderate accepted, §12) |
 | Database verification | `pnpm verify:neon` | — | 6 steps | **PASS** 6/6 in 68.6 s — **against local PG 18.3, not Neon** |
 | Performance | `pnpm perf --autocannon` | — | 2 endpoints | **PASS** (§9) |
@@ -63,9 +63,9 @@ All commands are the root `package.json` scripts, run from the repository root.
 `--retries=0` is used for the E2E run on purpose: a green run must be a first-try
 green run. (CI keeps Playwright's `retries=1` and uploads traces on failure.)
 
-Total: **119 automated tests** (40 + 46 + 16 + 2 + 15), all passing, plus the
+Total: **122 automated tests** (40 + 48 + 16 + 2 + 16), all passing, plus the
 six-step database verification and the load harness. The count rose from 115 at
-the M6 gate to 119 with the four Gate 4 regression tests (`F01-E2` range cap,
+the M6 gate to 122 with seven regression tests added during M6 close-out and M7 (`F01-E2` range cap,
 `F02-H3` windowed-booking query, two shared label-cache/limit unit tests).
 
 ---
@@ -76,26 +76,30 @@ IDs come from `docs/00_ANALYSIS.md`. "Where" is the file that proves it.
 
 | ID | Requirement | Where | Result |
 | --- | --- | --- | --- |
-| FR-01 | Owner registers, verifies email, logs in/out | `apps/api/tests/integration/auth.test.ts` (7), `tests/e2e/public.spec.ts` "S01 signs in…", "S01 rejects wrong credentials" | PASS |
-| FR-02 | Create/edit/archive event type | `flows.test.ts` F01-H1/E1/N1, `tests/e2e/core-loop.spec.ts` "S02 → S05" | PASS |
-| FR-03 | Weekly availability + time zone | `flows.test.ts` F02-H1/E1/N1/H2, `timezone.test.ts` (7) | PASS |
-| FR-04 | Visitor views published event and slots | `flows.test.ts` F03-H1/E1/N1/H2, `public.spec.ts` "S06 shows the published event…", "S07 lists real slots…" | PASS |
-| FR-05 | Visitor books without an account | `flows.test.ts` F03-*, `core-loop.spec.ts` "S06 → S09 → S10" | PASS |
+| FR-01 | Owner registers, verifies email, logs in/out | `flows.test.ts` F00-H1, F00-N1; `apps/api/tests/integration/auth.test.ts` (7); `tests/e2e/public.spec.ts` "S01 signs in…", "S01 rejects wrong credentials" | PASS |
+| FR-02 | Create/edit/archive event type | `flows.test.ts` F01-H1 (create+publish), F01-H2 (archive → 404 publicly), F01-E1, F01-N1; `core-loop.spec.ts` "S02 → S05" | PASS |
+| FR-03 | Weekly availability + time zone | `flows.test.ts` F01-E1 (invalid/overlapping ranges); `timezone.test.ts` (7: DST, host≠invitee zone, invalid zone, pinned clock); `packages/shared/src/slots.test.ts` (9) | PASS |
+| FR-04 | Visitor views published event and slots | `flows.test.ts` F01-H1, F01-H2 (archived 404), F02-N1 (draft 404), F01-E2; `public.spec.ts` "S06 shows the published event…", "S07 lists real slots…" | PASS |
+| FR-05 | Visitor books without an account | `flows.test.ts` F02-H1, F02-E1, F02-N1; `core-loop.spec.ts` "S06 → S09 → S10" | PASS |
 | FR-06 | No overlapping confirmed bookings per host | `tests/concurrency/booking.test.ts` (2), `verify:constraint` (5 checks), restored-copy probe (§8) | PASS |
-| FR-07 | Confirmation email queued, only after commit | `tests/integration/outbox.test.ts` (5) | PASS |
-| FR-08 | Cancel/reschedule via secure token | `flows.test.ts` F02-H2, `core-loop.spec.ts` "S10 reschedule…", `public.spec.ts` "S10 shows a generic denial…" | PASS |
-| FR-09 | Clear setup/conflict messages | `core-loop.spec.ts` "a taken slot returns to slot selection…", `apps/web/src/App.test.tsx` (5) | PASS |
-| FR-10 | Paid bookings | not built (D-08) | N/A by decision |
-| NFR-01 | Read API p95 < 500 ms | `scripts/load.mjs`, `docs/perf/*.json` | PASS with caveats (§9) |
-| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | `tests/e2e/a11y.spec.ts`, `docs/a11y/contrast-390.json`, `contrast-1440.json` | PASS (§7) |
+| FR-07 | Confirmation email queued, only after commit | `flows.test.ts` F02-H1; `tests/integration/outbox.test.ts` (5) | PASS |
+| FR-08 | Cancel/reschedule via secure token | `flows.test.ts` F03-H1, F03-H2, F03-E1, F03-N1; `core-loop.spec.ts` "S10 reschedule…"; `public.spec.ts` "S10 shows a generic denial…" | PASS |
+| FR-09 | Clear setup/conflict messages | `core-loop.spec.ts` "a taken slot returns to slot selection…" (conflict recovery proven), `apps/web/src/App.test.tsx` (5) | **PARTIAL** — setup guidance is implemented but not usability-tested (`docs/PARITY.md`) |
+| FR-10 | Paid bookings | not built (D-08) | N/A by decision — scored 0 in `docs/PARITY.md` |
+| NFR-01 | Read API p95 < 500 ms | `scripts/load.mjs`, `docs/perf/*.json`, §9.4 | PASS on local PostgreSQL 18.3 — Neon latency not measured (§11) |
+| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | `tests/e2e/a11y.spec.ts`, `docs/a11y/contrast-390.json`, `contrast-1440.json` | **PARTIAL** — automated axe/contrast/keyboard/reflow pass; no manual WCAG audit or screen-reader pass (§7) |
 | NFR-03 | Zero double bookings | concurrency suite + exclusion constraint probe | PASS |
-| NFR-04 | Minimal invitee data, retention, deletion path | `accountDeletion.test.ts` (7), `docs/PRIVACY.md` | PASS |
+| NFR-04 | Minimal invitee data, retention, deletion path | `accountDeletion.test.ts` (7), `docs/PRIVACY.md` | **PARTIAL** — deletion proven; retention is policy + manual, no purge job (`docs/PRIVACY.md` §5) |
 | NFR-05 | Structured logs, request ids, `/health`, monitor hook | `logger.test.ts` (5), `requestId.test.ts` (5), `errorMonitor.test.ts` (7), `health.test.ts` (2), `observability.test.ts` (4) | PASS |
 | NFR-06 | Verified at 390 px and 1440 px (also 768/1024) | `a11y.spec.ts` axe scans + reflow test | PASS |
 
+The weighted score and the verdict derived from this table are in
+`docs/PARITY.md`; the gaps behind every PARTIAL are in `docs/GAPS.md`.
+
 Required test IDs from the Gate 3 list (all in `flows.test.ts`, all passing):
 F00-H1, F00-E1, F00-N1, F01-H1, F01-E1, F01-N1, F02-H1, F02-E1, F02-N1, F02-H2,
-F03-H1, F03-E1, F03-N1, F03-H2.
+F03-H1, F03-E1, F03-N1, F03-H2. Added afterwards: F01-H2 (archive), F01-E2
+(31-day cap), F02-H3 (windowed booking query), F03-H3 (booking-list filters).
 
 ---
 
@@ -126,11 +130,11 @@ the wall clock and start failing in January 2027.
 
 ---
 
-## 5. Integration tests — 46 (real PostgreSQL, real migrations, no mocks)
+## 5. Integration tests — 48 (real PostgreSQL, real migrations, no mocks)
 
 | File | Tests | Coverage |
 | --- | --- | --- |
-| `flows.test.ts` | 16 | The Gate 3 ID list: happy/error/negative for auth, event types, availability and public booking, plus `F01-E2` (32/40-day window → 422, 31 days → 200) and `F02-H3` (a booking that started before the window still blocks the slots inside it) |
+| `flows.test.ts` | 18 | The Gate 3 ID list: happy/error/negative for auth, event types, availability and public booking, plus `F01-H2` (archive hides the event publicly), `F01-E2` (32/40-day window → 422, 31 days → 200), `F02-H3` (a booking that started before the window still blocks the slots inside it) and `F03-H3` (booking-list status/date filters, no cross-host leak) |
 | `auth.test.ts` | 7 | Register → verify → login → logout, session revocation, duplicate email, weak password, unverified login refused, reset flow |
 | `timezone.test.ts` | 7 | DST spring-forward/fall-back, host≠invitee zones, pinned-clock window, invalid zone → 422 |
 | `outbox.test.ts` | 5 | Job exists only if the booking transaction committed; retry with exponential backoff; bounded attempts; `FOR UPDATE SKIP LOCKED` polling |
@@ -182,6 +186,20 @@ output is the proof the database, not the application, is enforcing the invarian
 Screens scanned: S01 sign in, S02 dashboard, S03 event editor, S04 availability,
 S05 preview and publish, S06 public event, S07 slot selector, S08 invitee details,
 S09 confirmation, S10 manage booking, S11 booking list.
+
+### One intermittent failure, kept in the record (DEV-28)
+
+The S07 step of the axe sweep asserts that the slot button it clicked reports
+`aria-pressed="true"`. It failed **once in six runs** during M7 close-out and
+passed on every re-run. It was not dismissed as flake: the assertion can only
+fail if the first slot button at assert time is not the one that was clicked, and
+the cause was in the screen — on a date change the previous day's buttons stayed
+clickable until the new list arrived, so a click could land on a slot that the new
+list did not contain, leaving "Continue" enabled for a time that was no longer
+offered. `S07SlotSelector` now clears both `slots` and `selected` whenever the
+`(slug, date, zone)` query changes, the existing assertion was left untouched, and
+a dedicated E2E test (`S07 drops the previous day's slots and selection when the
+date changes`) pins the behaviour. No retry was added and no assertion weakened.
 
 ### Contrast audit (not just axe)
 
@@ -420,10 +438,10 @@ frozen lockfile:
 | --- | --- | --- |
 | `lint-typecheck` | — | `pnpm lint`, `pnpm typecheck`, `pnpm build` |
 | `unit` | lint-typecheck | `pnpm test:unit` (40) |
-| `integration` | unit | `postgres:16` service → `prisma migrate deploy` → `verify:constraint` → `pnpm test:integration` (46) |
+| `integration` | unit | `postgres:16` service → `prisma migrate deploy` → `verify:constraint` → `pnpm test:integration` (48) |
 | `security` | integration | `postgres:16` → migrate → `pnpm test:security` (16) |
 | `concurrency` | security | `postgres:16` → migrate → `pnpm test:concurrency` (2) |
-| `e2e` | concurrency | `postgres:16` → migrate → Chromium → `pnpm test:e2e` (15); traces uploaded on failure |
+| `e2e` | concurrency | `postgres:16` → migrate → Chromium → `pnpm test:e2e` (16); traces uploaded on failure |
 | `audit` | — | `pnpm audit --audit-level=high` |
 
 The four database jobs run the **real migrations** and the real suites — no
@@ -525,10 +543,10 @@ pnpm db:migrate:deploy            # or prisma:migrate for a dev database
 
 pnpm lint && pnpm typecheck && pnpm build
 pnpm test:unit                    # 40
-pnpm test:integration             # 46
+pnpm test:integration             # 48
 pnpm test:security                # 16
 pnpm test:concurrency             # 2
-pnpm test:e2e --retries=0         # 15, boots web + api itself
+pnpm test:e2e --retries=0         # 16, boots web + api itself
 pnpm audit --audit-level=high
 pnpm verify:neon                  # 6 steps: target, migrate, constraint, 3 suites
 pnpm perf --autocannon            # NFR-01, writes docs/perf/<stamp>.json

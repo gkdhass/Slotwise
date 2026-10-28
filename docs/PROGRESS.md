@@ -1,7 +1,7 @@
 # Slotwise — Progress
 
 Last updated: 2026-10-28 (GATE 4 accepted; Gate 4 conditions applied on
-`m6-testing`; M7 in progress on `m7-parity`).
+`m6-testing`; M7 complete on `m7-parity`, awaiting GATE 5).
 
 ## Current milestone
 
@@ -22,8 +22,9 @@ CI now runs Node 22 in all seven jobs and the root `package.json` declares
 `engines.node >= 22` (DEV-22). The three moderate audit advisories are accepted
 with reasoning (DEV-23). **No GitHub Actions run has been observed yet.**
 
-M7 "parity & traceability" is in progress on `m7-parity`. M8, M9, M10 and Phase 11
-are **not** started and will not start without explicit authorisation.
+M7 "parity & traceability" is **complete** on `m7-parity` and awaiting GATE 5.
+M8, M9, M10 and Phase 11 are **not** started and will not start without explicit
+authorisation.
 
 Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 
@@ -79,7 +80,38 @@ Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 8. **Dependency security**: Vitest 4, zod 4 and a `deepmerge-ts` override clear
    `pnpm audit --audit-level=high` (was 3 critical + 3 high). DEV-19.
 
+## Delivered in M7 (parity & traceability)
+
+1. **`docs/PARITY.md`** — the requirement register for all 10 FRs and 6 NFRs with
+   priority weights (must 3 / should 2 / could 1), pass/partial/fail scores with
+   evidence links, the arithmetic shown (39.0 / 44 = **88.6 %**) and the verdict
+   rule applied. Two musts and one should are scored **partial**, and FR-10 is
+   scored **fail** by decision — nothing is rounded up.
+2. **`docs/TRACEABILITY.md`** — all 16 rows of the Implementation Plan's
+   traceability matrix (row 16, the M8 rebrand, is the only undelivered row) plus
+   a requirement → evidence table and a screen → route table, with real file
+   paths, route mounts and test names.
+3. **`docs/GAPS.md`** — 15 open gaps, each with severity, a fix plan or a reasoned
+   deferral and the owner action where one is needed. Six gaps were cheap and
+   were fixed in this milestone (archive path, booking-list filters, range-cap
+   boundary, windowed-booking query, README, S07 stale-slot race).
+4. **`docs/REPORT_OUTLINE.md`** — chapter-by-chapter mapping of artefacts to the
+   final report, the six figures that must be drawn by hand, and what the owner
+   must write (chiefly the literature review and the reflective chapters).
+5. **`docs/README_CHECK.md`** — a clean clone in a temp folder, timed. First
+   attempt **failed** at `pnpm db:migrate` (`Environment variable not found:
+   DATABASE_URL`, because the API reads `apps/api/.env`); with the fix, 4 min 33 s
+   to a working database and `pnpm dev` serving web + api. The README was
+   rewritten accordingly.
+6. **S07 stale-slot race fixed** (DEV-28). One intermittent E2E failure
+   (`toHaveAttribute("aria-pressed", "true")`) was traced to the product, not the
+   test: on a date change the previous day's slot buttons stayed clickable until
+   the new list arrived, so a click could select a slot that then vanished while
+   "Continue" stayed enabled. The screen now clears the list and the selection
+   whenever the `(slug, date, zone)` query changes, and a new E2E test pins it.
+
 ## Test status (all executed 2026-10-28, final code state, no skips)
+
 
 | Command | Result |
 |---|---|
@@ -87,19 +119,19 @@ Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 | `pnpm typecheck` | clean (3 packages) |
 | `pnpm build` | web 201.34 kB / 62.95 kB gzip; api bundle 62.9 kB |
 | `pnpm test:unit` | **40 passed** — shared 10, api 25, web 5 |
-| `pnpm test:integration` | **46 passed** (6 files) |
+| `pnpm test:integration` | **48 passed** (6 files) |
 | `pnpm test:security` | **16 passed** |
 | `pnpm test:concurrency` | **2 passed** |
-| `pnpm test:e2e --retries=0` | **15 passed** (1.8 min) |
+| `pnpm test:e2e --retries=0` | **16 passed** (2.0-2.2 min, three consecutive runs) |
 | `pnpm audit --audit-level=high` | **PASS** — 0 critical, 0 high, 3 moderate accepted (DEV-23) |
 | `pnpm verify:neon` | **PASS 6/6** in 68.6 s — run against **local PostgreSQL 18.3**, not Neon |
 | `pnpm perf --autocannon` | **PASS** ×3 — `/slots` p95 184.6 / 212.0 / 210.7 ms; `/public/:slug` p95 59.5 / 61.7 / 65.9 ms |
 
-119 automated tests total (40 + 46 + 16 + 2 + 15). Required Gate 3 test IDs remain
+122 automated tests total (40 + 48 + 16 + 2 + 16). Required Gate 3 test IDs remain
 present and passing in `apps/api/tests/integration/flows.test.ts`: F00-H1, F00-E1,
 F00-N1, F01-H1, F01-E1, F01-N1, F02-H1, F02-E1, F02-N1, F02-H2, F03-H1, F03-E1,
-F03-N1, F03-H2, plus the Gate 4 additions F01-E2 (31-day cap) and F02-H3 (windowed
-booking query).
+F03-N1, F03-H2, plus F01-H2 (archive), F01-E2 (31-day cap), F02-H3 (windowed
+booking query) and F03-H3 (booking-list filters).
 
 ## Backup / restore rehearsal (executed today)
 
