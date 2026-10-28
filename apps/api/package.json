@@ -5,19 +5,30 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b",
-    "start": "node dist/index.js",
+    "build": "tsc -b && node scripts/bundle.mjs",
+    "start": "node dist/server.js",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:concurrency": "vitest run --config vitest.concurrency.config.ts",
-    "worker:email": "tsx src/worker/emailWorker.ts"
+    "verify:constraint": "tsx scripts/verify-constraint.ts",
+    "test:security": "vitest run --config vitest.security.config.ts",
+    "seed:e2e": "tsx prisma/seed-e2e.ts",
+    "seed:perf": "tsx prisma/seed-perf.ts",
+    "delete:account": "tsx scripts/delete-account.ts",
+    "worker:email": "tsx src/worker/emailWorker.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "@slotwise/shared": "workspace:*",
     "express": "^4.21.2",
-    "zod": "^3.23.8",
+    "zod": "^4.6.7",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "helmet": "^8.0.0",
@@ -27,6 +38,7 @@
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
+    "prisma": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "@types/cors": "^2.8.17",
@@ -39,6 +51,6 @@
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.12"
   }
 }
