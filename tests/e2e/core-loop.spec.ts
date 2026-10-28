@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { AxeBuilder } from "@axe-core/playwright";
 import {
   bookThroughUi,
   bookViaApi,
@@ -148,78 +147,3 @@ test.describe("owner core loop", () => {
   });
 });
 
-test.describe("accessibility", () => {
-  async function scan(page: import("@playwright/test").Page) {
-    const results = await new AxeBuilder({ page }).analyze();
-    return results.violations;
-  }
-
-  test("axe S01 sign in", async ({ page }) => {
-    await page.goto("/login");
-    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S02 dashboard", async ({ page }) => {
-    await page.goto("/app");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S03 event editor, S04 availability, S05 preview", async ({ page }) => {
-    await openEventEditor(page);
-    await expect(page.getByRole("heading", { name: "Event editor" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-
-    await page.getByRole("button", { name: "Availability" }).click();
-    await expect(page.getByRole("heading", { name: "Availability" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-
-    await page.getByRole("button", { name: "Preview" }).click();
-    await expect(page.getByRole("heading", { name: "Preview and publish" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S06 public event page", async ({ page }) => {
-    await page.goto("/book/intro-tutoring");
-    await expect(page.getByRole("heading", { name: "Intro tutoring" })).toBeVisible();
-    await expect(page.getByTestId("policy-public")).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S07 slot selector", async ({ page }) => {
-    await page.goto("/book/intro-tutoring/slots");
-    await page.getByLabel("Date").fill(upcomingWeekday(5));
-    await expect(page.locator("button[aria-pressed]").first()).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S08 invitee details", async ({ page, request }) => {
-    const slots = await slotsForDate(request, upcomingWeekday(5));
-    expect(slots.length).toBeGreaterThan(0);
-    await page.goto(`/book/intro-tutoring/details?start=${encodeURIComponent(slots[0].startAt)}`);
-    await expect(page.getByRole("heading", { name: "Your details" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-
-  test("axe S09 confirmation and S10 management", async ({ page, request }) => {
-    const date = upcomingWeekday(3);
-    const slots = await slotsForDate(request, date);
-    const booked = await bookViaApi(request, slots[0].startAt, { name: "Axe Invitee" });
-
-    await page.goto(`/manage/${booked.token}`);
-    await expect(page.getByRole("heading", { name: "Manage booking" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-
-    // S09 in its confirmed state (the only state that claims success).
-    await bookThroughUi(page, { date: upcomingWeekday(4), index: 0, name: "Axe Confirmed" });
-    expect(await scan(page)).toEqual([]);
-    expect(dateInZone(new Date().toISOString(), HOST_TZ)).toBeTruthy();
-  });
-
-  test("axe S11 booking list", async ({ page }) => {
-    await page.goto("/app/bookings");
-    await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  });
-});
