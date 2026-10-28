@@ -186,6 +186,44 @@ describe("F01 event management", () => {
     expect(stored.archivedAt).toBeNull();
     expect(stored.isPublished).toBe(true);
   });
+
+  it("F01-H2: archiving an event hides it from the public page and the slots API", async () => {
+    const { agent, userId } = await createOwner({ prefix: "f01h2" });
+    track(userId);
+    const ev = await createEvent(agent, { title: "Archive me" });
+
+    // Publicly visible and bookable before archiving.
+    expect((await request(app).get(`/api/v1/public/${ev.slug}`)).status).toBe(200);
+    const before = await listSlots(ev.slug, { spanDays: 7 });
+    expect(before.length).toBeGreaterThan(0);
+
+    const archived = await agent.delete(`/api/v1/event-types/${ev.id}`);
+    expect(archived.status).toBe(204);
+
+    const stored = await prisma.eventType.findUniqueOrThrow({ where: { id: ev.id } });
+    expect(stored.archivedAt).not.toBeNull();
+    expect(stored.isPublished).toBe(false);
+
+    // The row still exists (archive, not delete), but nothing is exposed publicly.
+    const page = await request(app).get(`/api/v1/public/${ev.slug}`);
+    expect(page.status).toBe(404);
+    expect(page.body.error.code).toBe("NOT_FOUND");
+    const slots = await request(app)
+      .get(`/api/v1/public/${ev.slug}/slots`)
+      .query({
+        from: new Date(Date.now() + 86_400_000).toISOString(),
+        to: new Date(Date.now() + 8 * 86_400_000).toISOString(),
+        tz: "UTC",
+      });
+    expect(slots.status).toBe(404);
+
+    // Archiving removes the event from the owner's active list, but the row and
+    // its bookings survive (archive ≠ delete).
+    const list = await agent.get("/api/v1/event-types");
+    expect(list.status).toBe(200);
+    expect(list.body.some((e: { id: string }) => e.id === ev.id)).toBe(false);
+  });
+
   it("F01-E2: a slots request longer than 31 days is refused with a clear message", async () => {
     const { agent, userId } = await createOwner({ prefix: "f01e2" });
     track(userId);
@@ -480,5 +518,49 @@ describe("F03 management", () => {
     const after = await listSlots(ev.slug, { spanDays: 5 });
     expect(after.some((s) => s.startAt === oldSlot.startAt)).toBe(true);
     expect(after.some((s) => s.startAt === newSlot.startAt)).toBe(false);
+  });
+
+  it("F03-H3: the owner booking list filters by status and date and never leaks another host", async () => {
+    const { agent, userId } = await createOwner({ prefix: "f03h3" });
+    track(userId);
+    const ev = await createEvent(agent, { title: "List me" });
+    const slots = await listSlots(ev.slug, { spanDays: 5 });
+    expect(slots.length).toBeGreaterThanOrEqual(2);
+    const [earlier, later] = slots;
+
+    const first = await book(ev.slug, earlier);
+    const second = await book(ev.slug, later);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+
+    // One of the two is canceled, so the list holds both statuses.
+    const canceled = await request(app).post(`/api/v1/manage/${first.body.managementToken}/cancel`);
+    expect(canceled.status).toBe(200);
+
+    // A second host books their own slot: it must never appear in the first list.
+    const other = await createOwner({ prefix: "f03h3other" });
+    track(other.userId);
+    const otherEvent = await createEvent(other.agent, { title: "Not yours" });
+    const otherBooking = await book(otherEvent.slug, await firstSlot(otherEvent.slug));
+    expect(otherBooking.status).toBe(201);
+
+    const all = await agent.get("/api/v1/bookings");
+    expect(all.status).toBe(200);
+    expect(all.body).toHaveLength(2);
+    expect(all.body[0].eventType.slug).toBe(ev.slug);
+    const ids = (rows: Array<{ id: string }>) => rows.map((r) => r.id).sort();
+
+    const onlyCanceled = await agent.get("/api/v1/bookings").query({ status: "canceled" });
+    expect(ids(onlyCanceled.body)).toEqual([first.body.booking.id]);
+
+    const onlyConfirmed = await agent.get("/api/v1/bookings").query({ status: "confirmed" });
+    expect(ids(onlyConfirmed.body)).toEqual([second.body.booking.id]);
+
+    // `to` is an inclusive upper bound on startAt, so this window holds only the
+    // earlier booking even though both are confirmed/canceled rows for the host.
+    const windowed = await agent
+      .get("/api/v1/bookings")
+      .query({ from: new Date(new Date(earlier.startAt).getTime() - 3_600_000).toISOString(), to: earlier.startAt });
+    expect(ids(windowed.body)).toEqual([first.body.booking.id]);
   });
 });
