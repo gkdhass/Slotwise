@@ -73,6 +73,10 @@ Additional required coverage:
 - CSRF enforced (bypass genuinely off) — `security.test.ts` with `vitest.security.config.ts`.
 
 ## Deviations / risks
+- **DEV-13 (HARD BLOCKER before M10): Neon verification is deferred.** All results in this document
+  were produced on **local PostgreSQL 18.3**. The Neon databases have not been exercised: no
+  migration, no `23P01` probe, no suites. The owner must run `pnpm verify:neon` with the Neon
+  direct URL in `.env` and get 6/6 PASS before any deploy work starts.
 - **DEV-05 stands: the dev database is local PostgreSQL 18.3, not Neon.** `.env` and
   `apps/api/.env` still point at `postgresql://slotwise:slotwise@localhost:5432/slotwise`, so all
   DB-backed results above were produced against local PG 18, not the Neon instance the Gate 2

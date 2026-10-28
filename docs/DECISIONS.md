@@ -48,6 +48,7 @@ Format: ID | Decision | Reason / source | Date | Status.
 | DEV-10 | Playwright starts two web servers (`web`, `api`) instead of `pnpm dev`, and Vite is pinned to `host: "127.0.0.1"`. | `pnpm --parallel`'s output multiplexer stalls when its stdout is a pipe (Playwright's spawn), so the stack never became ready; and Vite's default resolves `localhost` to `::1` on Windows, which the `127.0.0.1` readiness probe cannot reach. Debugged with `DEBUG=pw:webserver`. |
 | DEV-11 | E2E servers run with raised rate limits (`RATE_LIMIT_*`) via `webServer.env`. The real limits are still enforced and proven by `tests/security`. | 19 browser tests legitimately exceed a 10-per-15-min login bucket; the production limits remain untested-by-E2E but fully covered by the security suite. |
 | DEV-12 | `tests/e2e/.auth/owner.json` (Playwright storage state) is git-ignored. | It contains a live session cookie; committing it would leak a credential. |
+| DEV-13 | Neon verification deferred; dev and tests run on local PostgreSQL. Full suites on Neon are a HARD requirement before M10 deploy. | Gate 3 conditional approval could not be satisfied: `DATABASE_URL` in `.env` and `apps/api/.env` remained the local value (host type LOCAL, 54 chars, mtime unchanged at 2026-10-27T08:45:33Z) across three owner attempts to write the Neon direct URL, and the handoff file never appeared on this filesystem. `pnpm verify:neon` was added so the owner can run the identical six-step check themselves once Neon is reachable. |
 
 ## C. Assumptions recorded (master prompt rule 6)
 

@@ -22,7 +22,9 @@
     "test:e2e": "playwright test",
     "test:concurrency": "pnpm --filter @slotwise/api test:concurrency",
     "db:migrate": "pnpm --filter @slotwise/api prisma:migrate",
-    "worker:email": "pnpm --filter @slotwise/api worker:email"
+    "worker:email": "pnpm --filter @slotwise/api worker:email",
+    "verify:neon": "node scripts/verify-db.mjs",
+    "check:db": "node scripts/check-db-target.mjs"
   },
   "devDependencies": {
     "prettier": "^3.3.0",

@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:concurrency": "vitest run --config vitest.concurrency.config.ts",
+    "verify:constraint": "tsx scripts/verify-constraint.ts",
     "test:security": "vitest run --config vitest.security.config.ts",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
     "worker:email": "tsx src/worker/emailWorker.ts",
