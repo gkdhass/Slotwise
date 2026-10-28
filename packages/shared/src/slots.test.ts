@@ -89,6 +89,48 @@ describe("generateSlots", () => {
     expect(new Set(starts).size).toBe(starts.length);
   });
 
+  it("formats labels as 'EEE d MMM, h:mm a' in the display time zone", () => {
+    // Pinned regression for the label renderer: it replaced
+    // `format(toZonedTime(...), "EEE d MMM, h:mm a")` with a cached Intl
+    // formatter, and must stay byte-identical (12-hour clock, uppercase period,
+    // no leading zero on the day or the hour).
+    const cases: Array<{ displayTimezone: string; from: string; expected: string[] }> = [
+      { displayTimezone: "UTC", from: "2026-06-01T10:00:00.000Z", expected: ["Mon 1 Jun, 10:00 AM", "Mon 1 Jun, 10:30 AM"] },
+      { displayTimezone: "UTC", from: "2026-06-01T00:00:00.000Z", expected: ["Mon 1 Jun, 12:00 AM", "Mon 1 Jun, 12:30 AM"] },
+      { displayTimezone: "UTC", from: "2026-06-01T12:00:00.000Z", expected: ["Mon 1 Jun, 12:00 PM", "Mon 1 Jun, 12:30 PM"] },
+      {
+        displayTimezone: "Asia/Kolkata",
+        from: "2026-06-01T10:00:00.000Z",
+        expected: ["Mon 1 Jun, 3:30 PM", "Mon 1 Jun, 4:00 PM"],
+      },
+      {
+        // +5:45 offset, a zone whose wall clock is not on a whole hour.
+        displayTimezone: "Asia/Kathmandu",
+        from: "2026-06-01T10:00:00.000Z",
+        expected: ["Mon 1 Jun, 3:45 PM", "Mon 1 Jun, 4:15 PM"],
+      },
+      {
+        // Spring-forward day: 01:30 local is EST (-5), 03:00 local is EDT (-4).
+        displayTimezone: "America/New_York",
+        from: "2026-03-08T06:00:00.000Z",
+        expected: ["Sun 8 Mar, 1:00 AM", "Sun 8 Mar, 1:30 AM"],
+      },
+    ];
+
+    for (const c of cases) {
+      const slots = generateSlots({
+        rules: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, startLocal: "00:00", endLocal: "23:59" })),
+        durationMinutes: 30,
+        eventTimezone: "UTC",
+        displayTimezone: c.displayTimezone,
+        from: new Date(c.from),
+        to: new Date(new Date(c.from).getTime() + 60 * 60_000),
+        existingBookings: [],
+      });
+      expect(slots.map((s) => s.label).slice(0, c.expected.length)).toEqual(c.expected);
+    }
+  });
+
   it("DST fall-back: produces slots without crashing (America/New_York)", () => {
     const from = new Date("2026-11-01T00:00:00Z");
     const to = new Date("2026-11-02T00:00:00Z");
