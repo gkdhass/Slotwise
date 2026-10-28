@@ -29,8 +29,9 @@ consume it with no build step. Plain `node dist/index.js` therefore fails with
 `ERR_UNKNOWN_FILE_EXTENSION`. `pnpm build` runs `tsc -b` (type-check plus
 declarations/source maps) and then `apps/api/scripts/bundle.mjs` (esbuild),
 which inlines the workspace package and leaves npm dependencies external.
-Measured: `dist/server.js` = 104.4 kB, boots under `NODE_ENV=production`, and
-`GET /health` returns `{"status":"ok","service":"slotwise-api"}`.
+Measured: `dist/server.js` = 61.9 kB (139.6 kB with the source map), boots under
+`NODE_ENV=production`, and `GET /health` returns
+`{"status":"ok","service":"slotwise-api"}`.
 
 ---
 
@@ -151,17 +152,19 @@ pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner --no-privileges \
 
 | Step | Result |
 | --- | --- |
-| `pg_dump --format=custom` | exit 0, 32,537 bytes |
+| `pg_dump --format=custom` | exit 0, 33,588 bytes |
 | `CREATE DATABASE slotwise_restore_check` | exit 0 |
 | `pg_restore --no-owner --no-privileges --exit-on-error` | exit 0 |
-| Row counts, source vs restored | `users` 4/4, `sessions` 26/26, `event_types` 5/5, `availability_rules` 17/17, `bookings` 16/16, `management_tokens` 15/15, `outbox_jobs` 31/31 — all OK |
+| Row counts, source vs restored | `users` 4/4, `sessions` 35/35, `event_types` 5/5, `availability_rules` 17/17, `bookings` 16/16, `management_tokens` 15/15, `outbox_jobs` 35/35 — all OK |
 | Schema objects | `bookings_no_host_overlap / x` (EXCLUDE) present, `btree_gist` + `pgcrypto` present, 1 migration recorded in `_prisma_migrations` |
-| Overlap probe in the restored copy | `PASS: 23P01 overlap rejected by bookings_no_host_overlap`; exactly 1 of the 2 conflicting rows kept |
+| Overlap probe in the restored copy | `RESULT: PASS — exclusion constraint verified` (SQLSTATE 23P01; exactly 1 confirmed row kept; adjacent slot allowed; cancelled slot re-bookable) |
 
-The probe inserts a user, an event type and two overlapping bookings inside a
-`DO` block; the second insert must raise `exclusion_violation`. If the constraint
-were lost in the restore, the block raises `OVERLAP ACCEPTED` and the rehearsal
-fails loudly.
+The probe is `apps/api/scripts/verify-constraint.ts` run with `DATABASE_URL`
+pointed at the restored copy — the same probe CI and `pnpm verify:neon` use, not
+a hand-written `psql` block. It inserts an owner, an event type and overlapping
+bookings under a far-future date and cleans up after itself. If the constraint
+were lost in the restore, the overlapping insert would be accepted and the probe
+would exit non-zero.
 
 ---
 
