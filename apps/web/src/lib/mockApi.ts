@@ -8,8 +8,8 @@ import type {
   CreateBookingInput,
 } from "./types";
 
-const STORAGE_KEY = "slotwise-mock-state";
-
+// Unit-test fixture only. State is in-memory and is never persisted:
+// the shipped app talks to the real API and stores nothing in localStorage.
 type State = {
   events: EventType[];
   availability: AvailabilityRule[];
@@ -40,27 +40,11 @@ function seedState(): State {
   return { events: [ev], availability: rules, bookings: [] };
 }
 
-function loadState(): State {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as State;
-  } catch {
-    /* ignore */
-  }
-  const s = seedState();
-  saveState(s);
-  return s;
-}
+let state: State = seedState();
 
-function saveState(s: State) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
+function saveState(_next: State) {
+  // Intentionally a no-op: mock state lives only for the current process.
 }
-
-let state: State = loadState();
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
