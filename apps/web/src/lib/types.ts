@@ -39,7 +39,7 @@ export type Booking = {
   endAt: string;
   displayTimezone: string;
   status: "confirmed" | "canceled" | "completed" | "no_show";
-  managementToken: string;
+  managementToken?: string;
 };
 
 export type CreateBookingInput = {

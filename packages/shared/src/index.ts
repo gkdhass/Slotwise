@@ -1,3 +1,4 @@
+export * from "./slots.js";
 export const SLOTWISE_VERSION = "0.0.0";
 
 export const errorCodes = {

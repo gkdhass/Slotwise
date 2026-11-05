@@ -4,7 +4,9 @@
   "private": true,
   "description": "Slotwise — focused single-host scheduling MVP (final-year project).",
   "packageManager": "pnpm@12.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=22"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -15,16 +17,26 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "test:unit": "pnpm --filter @slotwise/api test:unit && pnpm --filter @slotwise/web test:unit",
+    "test:unit": "pnpm --filter @slotwise/shared test:unit && pnpm --filter @slotwise/api test:unit && pnpm --filter @slotwise/web test:unit",
     "test:integration": "pnpm --filter @slotwise/api test:integration",
-    "test:e2e": "pnpm --filter @slotwise/e2e test",
+    "test:e2e": "playwright test",
+    "test:security": "pnpm --filter @slotwise/api test:security",
+    "perf": "node scripts/load.mjs",
     "test:concurrency": "pnpm --filter @slotwise/api test:concurrency",
+    "prisma:generate": "pnpm --filter @slotwise/api prisma:generate",
+    "db:migrate:deploy": "pnpm --filter @slotwise/api prisma:migrate:deploy",
     "db:migrate": "pnpm --filter @slotwise/api prisma:migrate",
-    "worker:email": "pnpm --filter @slotwise/api worker:email"
+    "worker:email": "pnpm --filter @slotwise/api worker:email",
+    "verify:neon": "node scripts/verify-db.mjs",
+    "check:db": "node scripts/check-db-target.mjs"
   },
   "devDependencies": {
-    "prettier": "^3.3.0",
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.49.0",
+    "autocannon": "^8.0.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
     "typescript": "^5.6.0"
   }
 }
