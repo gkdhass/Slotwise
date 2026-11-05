@@ -1,0 +1,812 @@
+{
+  "generatedAt": "2026-11-05T06:39:16.032Z",
+  "trials": 20,
+  "contenders": 32,
+  "sleepMs": 5,
+  "strategies": [
+    {
+      "id": "check-then-insert",
+      "description": "Check and insert as separate operations; no constraint.",
+      "trials": [
+        {
+          "accepted": 31,
+          "rejected": 1,
+          "errors": 0,
+          "confirmed": 31,
+          "violation": true,
+          "elapsedMs": 200.5118,
+          "p95AttemptMs": 118.2966,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 80.31809999999996,
+          "p95AttemptMs": 78.34589999999997,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 83.589,
+          "p95AttemptMs": 80.77319999999997,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 79.61009999999999,
+          "p95AttemptMs": 78.48310000000004,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 85.1721,
+          "p95AttemptMs": 81.86609999999996,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 72.77430000000004,
+          "p95AttemptMs": 70.37510000000009,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 75.99390000000005,
+          "p95AttemptMs": 73.87299999999993,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 78.25250000000005,
+          "p95AttemptMs": 77.39859999999999,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 60.17279999999994,
+          "p95AttemptMs": 59.196199999999976,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 62.75469999999996,
+          "p95AttemptMs": 61.554899999999975,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 77.56759999999997,
+          "p95AttemptMs": 76.6296000000001,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 81.13610000000017,
+          "p95AttemptMs": 80.269,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 79.2047,
+          "p95AttemptMs": 78.04820000000018,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 79.04340000000002,
+          "p95AttemptMs": 77.96619999999984,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 77.09449999999993,
+          "p95AttemptMs": 75.7826,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 86.49919999999997,
+          "p95AttemptMs": 84.90179999999987,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 75.86220000000003,
+          "p95AttemptMs": 74.69960000000015,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 96.51769999999988,
+          "p95AttemptMs": 95.33480000000009,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 78.57580000000007,
+          "p95AttemptMs": 77.61199999999985,
+          "errorCodes": []
+        },
+        {
+          "accepted": 32,
+          "rejected": 0,
+          "errors": 0,
+          "confirmed": 32,
+          "violation": true,
+          "elapsedMs": 79.65800000000013,
+          "p95AttemptMs": 78.49410000000012,
+          "errorCodes": []
+        }
+      ],
+      "summary": {
+        "trials": 20,
+        "contendersPerTrial": 32,
+        "violations": 20,
+        "maxConfirmed": 32,
+        "meanAccepted": 31.95,
+        "meanRejected": 0.05,
+        "meanP95AttemptMs": 78.99503
+      }
+    },
+    {
+      "id": "transactional-check-without-constraint",
+      "description": "Check and insert in one READ COMMITTED transaction; no constraint.",
+      "trials": [
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 88.4840999999999,
+          "p95AttemptMs": 87.00400000000013,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 65.2346,
+          "p95AttemptMs": 63.343200000000024,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 80.87840000000028,
+          "p95AttemptMs": 79.76369999999997,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 76.47069999999985,
+          "p95AttemptMs": 75.19620000000032,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 91.55470000000014,
+          "p95AttemptMs": 90.33320000000003,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 60.614500000000135,
+          "p95AttemptMs": 59.23000000000002,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 64.15200000000004,
+          "p95AttemptMs": 62.562900000000354,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 107.9396999999999,
+          "p95AttemptMs": 105.95249999999987,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 105.80689999999959,
+          "p95AttemptMs": 103.85030000000006,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 110.46629999999959,
+          "p95AttemptMs": 107.10460000000012,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 89.2150999999999,
+          "p95AttemptMs": 87.22360000000026,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 106.44630000000006,
+          "p95AttemptMs": 104.48369999999977,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 107.5589,
+          "p95AttemptMs": 105.01579999999967,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 93.73169999999982,
+          "p95AttemptMs": 90.66190000000006,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 71.3733000000002,
+          "p95AttemptMs": 69.78020000000015,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 53.99569999999994,
+          "p95AttemptMs": 53.08640000000014,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 97.55669999999964,
+          "p95AttemptMs": 95.75540000000001,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 92.47629999999981,
+          "p95AttemptMs": 91.16200000000026,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 79.63040000000001,
+          "p95AttemptMs": 77.86419999999998,
+          "errorCodes": []
+        },
+        {
+          "accepted": 9,
+          "rejected": 23,
+          "errors": 0,
+          "confirmed": 9,
+          "violation": true,
+          "elapsedMs": 91.33440000000019,
+          "p95AttemptMs": 89.24289999999974,
+          "errorCodes": []
+        }
+      ],
+      "summary": {
+        "trials": 20,
+        "contendersPerTrial": 32,
+        "violations": 20,
+        "maxConfirmed": 9,
+        "meanAccepted": 9,
+        "meanRejected": 23,
+        "meanP95AttemptMs": 84.93083500000004
+      }
+    },
+    {
+      "id": "exclusion-constraint",
+      "description": "Concurrent insert protected by bookings_no_host_overlap.",
+      "trials": [
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 43.66600000000017,
+          "p95AttemptMs": 40.40740000000005,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 22.491300000000138,
+          "p95AttemptMs": 20.67099999999982,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 16.367499999999836,
+          "p95AttemptMs": 14.94250000000011,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 7117.3775,
+          "p95AttemptMs": 7114.9773000000005,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6452; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6454; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6452; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6451; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6457; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6452; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6461; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6459; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6459; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6457; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6457; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6458; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6467; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6470; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 6113.022499999999,
+          "p95AttemptMs": 6110.101300000002,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6482; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6478; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6496; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6492; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6492; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6494; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6478; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6480; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6492; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6489; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6496; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6497; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 9135.325800000002,
+          "p95AttemptMs": 9131.984099999998,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6511; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6507; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6515; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6511; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6507; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6509; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6516; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6515; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6511; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6512; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6517; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6516; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6520; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6517; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6517; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6519; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6536; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6535; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 17255.789999999997,
+          "p95AttemptMs": 17252.696299999996,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6548; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6545; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6541; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6540; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6545; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6543; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6539; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6538; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6542; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6539; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6543; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6542; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6549; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6541; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6543; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6544; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6541; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6546; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6545; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6547; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6550; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6548; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6549; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6551; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6554; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6549; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6553; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6550; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6550; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6552; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6540; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6553; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6555; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6554; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "P2024"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 20.269099999997707,
+          "p95AttemptMs": 18.511899999997695,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 17268.754799999995,
+          "p95AttemptMs": 17265.570200000002,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6593; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6592; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6590; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6591; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6596; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6590; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6603; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6599; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6590; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6601; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "P2024",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6600; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6593; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6593; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6594; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6601; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6602; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6590; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6595; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6607; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6596; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6596; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6597; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6607; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6598; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6601; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6600; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6605; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6603; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6603; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6604; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6605; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6606; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6599; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6607; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 8115.967499999999,
+          "p95AttemptMs": 8113.469400000002,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6618; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6614; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6614; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6616; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6618; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6621; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6636; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6635; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6630; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6629; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6635; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6630; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6630; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6634; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6638; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6636; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 17254.232099999994,
+          "p95AttemptMs": 17251.944900000002,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6653; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6643; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6647; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6653; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6643; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6657; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6645; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6644; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6646; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6648; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6644; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6643; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6647; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6648; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6651; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6650; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6660; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6651; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6645; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6649; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6645; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6653; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6650; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6657; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6654; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6652; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6654; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6655; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6656; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6654; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6659; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6656; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6656; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6658; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6652; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6660; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "P2024"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 6132.188899999994,
+          "p95AttemptMs": 6128.1745999999985,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6687; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6688; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6687; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6682; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6668; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6667; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6668; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6675; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6680; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6681; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6682; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6680; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 15.758199999996577,
+          "p95AttemptMs": 13.36030000000028,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 20.769399999990128,
+          "p95AttemptMs": 18.764299999995274,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 10125.180399999997,
+          "p95AttemptMs": 10123.440799999997,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6766; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6763; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "P2024",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6763; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6765; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6778; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6774; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6769; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6766; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6769; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6771; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6774; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6773; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6766; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6767; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6772; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6769; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6773; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6772; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6774; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6776; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 4083.763699999996,
+          "p95AttemptMs": 4080.755999999994,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6784; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6782; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6785; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6784; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6782; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6783; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6785; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6790; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 29.144800000009127,
+          "p95AttemptMs": 25.480200000005425,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 22.78770000000077,
+          "p95AttemptMs": 20.93509999998787,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 15.406600000002072,
+          "p95AttemptMs": 13.942999999999302,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"23P01\", message: \"conflicting key value violates exclusion constraint \\\"bookings_no_host_overlap\\\"\", severity: \"ERROR\", detail: Some(\"Key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")) conflicts with existing key (user_id, tstzrange(start_at, end_at, '[)'::text))=(692917d4-0791-4849-beec-1e07443dc0a4, [\\\"2035-01-02 15:30:00+05:30\\\",\\\"2035-01-02 16:00:00+05:30\\\")).\"), column: None, hint: None }), transient: false })"
+          ]
+        },
+        {
+          "accepted": 1,
+          "rejected": 31,
+          "errors": 31,
+          "confirmed": 1,
+          "violation": false,
+          "elapsedMs": 17268.689100000003,
+          "p95AttemptMs": 17262.353499999997,
+          "errorCodes": [
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6913; blocked by process 13952.\\nProcess 13952 waits for ShareLock on transaction 6914; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12168 waits for ShareLock on transaction 6925; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6923; blocked by process 12168.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6914; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6915; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6916; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6913; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 15564 waits for ShareLock on transaction 6921; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6920; blocked by process 15564.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "P2024",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5176 waits for ShareLock on transaction 6930; blocked by process 8712.\\nProcess 8712 waits for ShareLock on transaction 6919; blocked by process 5176.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6918; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6916; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6926; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6928; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13704 waits for ShareLock on transaction 6926; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6921; blocked by process 13704.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6916; blocked by process 16364.\\nProcess 16364 waits for ShareLock on transaction 6917; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6920; blocked by process 15564.\\nProcess 15564 waits for ShareLock on transaction 6930; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 5860 waits for ShareLock on transaction 6923; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6918; blocked by process 5860.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6918; blocked by process 5860.\\nProcess 5860 waits for ShareLock on transaction 6922; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 13952 waits for ShareLock on transaction 6921; blocked by process 13704.\\nProcess 13704 waits for ShareLock on transaction 6924; blocked by process 13952.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 8712 waits for ShareLock on transaction 6927; blocked by process 12956.\\nProcess 12956 waits for ShareLock on transaction 6925; blocked by process 8712.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 16364 waits for ShareLock on transaction 6929; blocked by process 12168.\\nProcess 12168 waits for ShareLock on transaction 6926; blocked by process 16364.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })",
+            "\nInvalid `prisma.booking.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"40P01\", message: \"deadlock detected\", severity: \"ERROR\", detail: Some(\"Process 12956 waits for ShareLock on transaction 6919; blocked by process 5176.\\nProcess 5176 waits for ShareLock on transaction 6927; blocked by process 12956.\"), column: None, hint: Some(\"See server log for query details.\") }), transient: false })"
+          ]
+        }
+      ],
+      "summary": {
+        "trials": 20,
+        "contendersPerTrial": 32,
+        "violations": 0,
+        "maxConfirmed": 1,
+        "meanAccepted": 1,
+        "meanRejected": 31,
+        "meanP95AttemptMs": 6001.124204999998
+      }
+    }
+  ]
+}

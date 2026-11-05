@@ -23,6 +23,7 @@
     "test:security": "pnpm --filter @slotwise/api test:security",
     "perf": "node scripts/load.mjs",
     "test:concurrency": "pnpm --filter @slotwise/api test:concurrency",
+    "evaluate:booking": "node scripts/booking-strategy-evaluation.mjs",
     "prisma:generate": "pnpm --filter @slotwise/api prisma:generate",
     "db:migrate:deploy": "pnpm --filter @slotwise/api prisma:migrate:deploy",
     "db:migrate": "pnpm --filter @slotwise/api prisma:migrate",
