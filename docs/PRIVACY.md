@@ -68,10 +68,16 @@ archive logs itself.
 | Email-verification token | 24 hours | `VERIFY_TTL_MS` |
 | Management token | 30 days | `management_tokens.expires_at` |
 | Booking + its outbox job | Until the host deletes the account or the invitee asks for deletion | Deletion path, §6 |
-| Canceled booking | Kept as `status = canceled` so the slot history stays truthful; removed with the account | §6 |
+| Canceled booking | 90 days after cancellation (`updated_at`), configurable | `purge:retention` |
+| Completed booking | 24 months after `end_at`, configurable | `purge:retention` |
 
-Not implemented: an automatic purge job for old canceled bookings. Until one
-exists, retention for those rows is "until deleted by the operator".
+The purge is an operator-scheduled command, not an always-on worker: run it from
+cron or the host scheduler. It deletes matching outbox payloads in the same
+transaction before deleting bookings. Defaults are controlled by
+`RETENTION_CANCELED_DAYS=90`, `RETENTION_COMPLETED_MONTHS=24`, and
+`RETENTION_BATCH_SIZE=500`; malformed values fail rather than silently widening
+retention. A canceled booking's age uses its cancellation update timestamp;
+completed age uses its end timestamp. Rows with other statuses are retained.
 
 **Backups** (see `docs/DEPLOYMENT.md` §6) keep a copy of deleted rows until the
 backup ages out of the 7-daily-dump window. A deletion request therefore removes

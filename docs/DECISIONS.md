@@ -76,3 +76,4 @@ Format: ID | Decision | Reason / source | Date | Status.
 - A-07: Phase 11 ML module starts only after Gate 3 passes AND owner says "start Phase 11".
 - A-08: pnpm (not npm) for workspaces; pnpm 12.15.0 installed locally. Docker not available locally → Postgres via native install or remote (Neon) for dev; docker-compose.yml still provided for environments with Docker.
 - A-09: Node.js v22.16.0; git 2.53.0.
+- A-11: NFR-04 retention is enforced by an operator-scheduled `purge:retention` command, not by the email worker or an API request path. Defaults are 90 days after cancellation (`updated_at`) and 24 months after completion (`end_at`); `RETENTION_CANCELED_DAYS`, `RETENTION_COMPLETED_MONTHS`, and `RETENTION_BATCH_SIZE` are configurable positive integers. The purge removes outbox payloads and bookings in one transaction and keeps other statuses.
