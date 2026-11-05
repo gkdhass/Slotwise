@@ -1,7 +1,7 @@
 # Slotwise — Progress
 
-Last updated: 2026-10-28 (GATE 4 accepted; Gate 4 conditions applied on
-`m6-testing`; M7 complete on `m7-parity`, awaiting GATE 5).
+Last updated: 2026-11-05 (CI run #13 green; Task A complete on
+`fix/trust-proxy`; Task B verification in progress on `fix/eefd009-review`).
 
 ## Current milestone
 
@@ -20,7 +20,14 @@ GATE 4 accepted M6. The four conditions attached to that acceptance are
 
 CI now runs Node 22 in all seven jobs and the root `package.json` declares
 `engines.node >= 22` (DEV-22). The three moderate audit advisories are accepted
-with reasoning (DEV-23). **No GitHub Actions run has been observed yet.**
+with reasoning (DEV-23). GitHub Actions run #13 is green: all seven jobs passed
+on `fix/ci-setup` (2026-11-05).
+
+Task A (`fix/trust-proxy`, based on `fix/ci-setup`) wires the explicit
+`TRUST_PROXY` setting, defaults it off, requires an exact positive hop count in
+production, and adds X-Forwarded-For/rate-limit tests. Task B is being verified
+on `fix/eefd009-review`; it adds auth token swap/deleted-user tests, an atomic
+availability replacement failure test, and overlap boundary coverage.
 
 M7 "parity & traceability" is **complete** on `m7-parity` and awaiting GATE 5.
 M8, M9, M10 and Phase 11 are **not** started and will not start without explicit
