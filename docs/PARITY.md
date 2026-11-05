@@ -1,4 +1,4 @@
-# PARITY.md — requirement register, score and verdict (M7)
+# PARITY.md — requirement register, score and verdict (M8 refresh)
 
 Purpose: answer "how much of the planned product actually exists, and is that
 enough to ship the MVP?" with arithmetic, not adjectives.
@@ -31,9 +31,9 @@ merely imperfect. Every row names the evidence; nothing is scored on intention.
 | FR-09 | Clear, actionable setup and conflict messages | should | 2 | **0.5** | 1.0 | Conflict recovery **is** proven (`core-loop.spec.ts` "a taken slot returns to slot selection with the invitee input preserved"; `fieldErrors` asserted in `F00-E1`, `F01-E1`, `F02-N1`). "Clear and actionable" setup guidance is implemented (`S03`–`S05`) but **not measured** — no usability test, no task-success metric. Half proven, half asserted. |
 | FR-10 | Paid bookings | could | 1 | **0.0** | 0.0 | Not built by decision D-08 (`PAYMENTS_ENABLED=false`). Gap G-02. |
 | NFR-01 | Read API p95 < 500 ms | must | 3 | 1.0 | 3.0 | `docs/TEST_REPORT.md` §9.4: `/slots` p95 **184.6 / 212.0 / 210.7 ms** and `/public/:slug` **59.5 / 61.7 / 65.9 ms**, 3 consecutive runs, 0 errors/timeouts. Caveat: loopback to local PostgreSQL 18.3 — Neon latency excluded and re-measured at M10 (G-05). |
-| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | must | 3 | **0.5** | 1.5 | `tests/e2e/a11y.spec.ts`: axe + contrast on every screen at 390 and 1440 px, keyboard-only core loop, reflow at 390/768/1024/1440 and 200 % zoom; contrast audit 216 + 228 samples, worst 5.18:1. **Not proven:** no manual WCAG 2.2 AA audit, no screen-reader pass (NVDA/VoiceOver), Chromium only. Automated tooling covers ~40 % of AA criteria. |
+| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | must | 3 | **0.5** | 1.5 | `tests/e2e/a11y.spec.ts`: axe + contrast on every screen at 390 and 1440 px, keyboard-only core loop, reflow at 390/768/1024/1440 and 200 % zoom; `apps/web/src/components/Dialog.test.tsx` covers modal focus/Escape behaviour; contrast audit 216 + 228 samples, worst 5.18:1. **Not proven:** manual WCAG 2.2 AA audit and NVDA screen-reader pass remain pending in `docs/A11Y_MANUAL_CHECKLIST.md`; Chromium only. |
 | NFR-03 | Zero double bookings | must | 3 | 1.0 | 3.0 | `booking.test.ts` (2 concurrency tests, 50 parallel requests), DB EXCLUDE constraint, `F02-E1`, `F03-E1` |
-| NFR-04 | Minimal invitee data, retention, deletion path | must | 3 | **0.5** | 1.5 | Data minimisation and deletion are real and tested: `accountDeletion.test.ts` (7), `docs/PRIVACY.md` inventory. **Not proven:** retention is policy + manual operator deletion; there is no scheduled purge job for old cancelled bookings (`docs/PRIVACY.md` §5 states this), and no backup-expiry drill. |
+| NFR-04 | Minimal invitee data, retention, deletion path | must | 3 | **0.5** | 1.5 | Data minimisation and deletion are tested in `accountDeletion.test.ts`; configurable 90-day canceled/24-month completed purge and transactional outbox cleanup are tested in `retentionPurge.test.ts`. **Not yet fully evidenced:** host scheduling and backup-expiry drill remain operational work, so the mandated partial score is retained. |
 | NFR-05 | Structured logs, request IDs, `/health`, error hook | must | 3 | 1.0 | 3.0 | `observability.test.ts` (4), `logger.test.ts` (5, incl. secret redaction), `requestId.test.ts` (5), `errorMonitor.test.ts` (7), `health.test.ts` (2) |
 | NFR-06 | Verified at 390 and 1440 px (also 768/1024) | must | 3 | 1.0 | 3.0 | `a11y.spec.ts` viewport scans at 390/768/1024/1440 and the reflow test |
 
@@ -71,8 +71,8 @@ The conditions are process conditions, not requirement failures:
 
 1. **Neon verification** (`pnpm verify:neon` 6/6 against a Neon host) — hard
    blocker before M10 (DEV-13).
-2. **CI must actually run** — the 7-job workflow has never executed on GitHub.
-3. **M8 rebrand sweep** (Implementation Plan matrix row 16) — not started.
+2. **CI is green** on main and PRs #8/#9; retain the seven-job workflow.
+3. **M8 rebrand sweep** (Implementation Plan matrix row 16) — not started on main.
 4. NFR-01 must be re-measured against Neon before the number is quoted as a
    production result.
 
@@ -81,7 +81,7 @@ The conditions are process conditions, not requirement failures:
 | Change | Points | New score |
 | --- | --- | --- |
 | Add a manual WCAG 2.2 AA review + one screen-reader pass (NFR-02 → 1.0) | +1.5 | 92.0 % |
-| Add a scheduled purge job for old cancelled bookings (NFR-04 → 1.0) | +1.5 | 95.5 % |
+| Schedule and evidence the retention purge on the production host (NFR-04 → 1.0) | +1.5 | 95.5 % |
 | Usability-test the setup guidance with 3–5 tutors (FR-09 → 1.0) | +1.0 | 97.7 % |
 | Implement payments (FR-10 → 1.0) | +1.0 | 100 % |
 

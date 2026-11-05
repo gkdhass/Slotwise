@@ -56,7 +56,7 @@ The matrix above is screen-shaped. The requirement register in
 | NFR-01 read API p95 < 500 ms | must | `packages/shared/src/slots.ts`, `routes/public.ts`, `scripts/load.mjs` | `docs/TEST_REPORT.md` §9.4: `/slots` p95 184.6 / 212.0 / 210.7 ms (3 runs); `/public/:slug` 59.5 / 61.7 / 65.9 ms |
 | NFR-02 WCAG 2.2 AA, keyboard loop, axe clean | must | `apps/web/src/components/*`, `tests/e2e/a11y.spec.ts` | `a11y.spec.ts` "axe and contrast: every screen at 390/1440 px", "keyboard-only core loop…", "reflow: no horizontal overflow…"; contrast audit `docs/a11y/contrast-*.json` |
 | NFR-03 zero double bookings | must | EXCLUDE constraint + transaction ordering | `booking.test.ts` (50 parallel requests → 1 confirmed; cross-event overlap → ≤ 1) |
-| NFR-04 minimal invitee data, retention, deletion | must | `services/accountDeletion.ts`, `docs/PRIVACY.md` | `accountDeletion.test.ts` (7); `docs/PRIVACY.md` inventory/retention |
+| NFR-04 minimal invitee data, retention, deletion | must | `services/accountDeletion.ts`, `services/retentionPurge.ts`, `scripts/purge-retention.ts`, `docs/PRIVACY.md` | `accountDeletion.test.ts` (7); `retentionPurge.test.ts`; `docs/PRIVACY.md` inventory, windows and operator scheduling |
 | NFR-05 logs, request IDs, health, error hook | must | `lib/logger.ts`, `middleware/requestId.ts`, `lib/errorMonitor.ts`, `/health`, `/health/ready` | `observability.test.ts` (4), `logger.test.ts` (5), `requestId.test.ts` (5), `errorMonitor.test.ts` (7), `health.test.ts` (2) |
 | NFR-06 verified at 390/1440 (also 768/1024) | must | Tailwind breakpoints, `Shell` | `a11y.spec.ts` viewport scans (390/768/1024/1440) + reflow test |
 
