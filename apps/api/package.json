@@ -18,6 +18,7 @@
     "seed:e2e": "tsx prisma/seed-e2e.ts",
     "seed:perf": "tsx prisma/seed-perf.ts",
     "delete:account": "tsx scripts/delete-account.ts",
+    "purge:retention": "tsx scripts/purge-retention.ts",
     "worker:email": "tsx src/worker/emailWorker.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

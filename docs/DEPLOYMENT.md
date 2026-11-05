@@ -54,6 +54,7 @@ Names only — never commit values. `.env.example` lists the same names.
 | `ERROR_MONITOR_WEBHOOK_URL` | no | JSON POST target for unhandled errors. |
 | `OUTBOX_MAX_ATTEMPTS`, `OUTBOX_BACKOFF_BASE_MS` | no | Retry policy. |
 | `RATE_LIMIT_*` | no | Overrides for the fixed-window limits. |
+| `RETENTION_CANCELED_DAYS`, `RETENTION_COMPLETED_MONTHS`, `RETENTION_BATCH_SIZE` | no (defaults `90`, `24`, `500`) | Retention purge windows and per-run batch cap. Positive integers only. |
 | `VITE_API_BASE_URL` | web build | API origin baked into the SPA bundle. |
 
 **Startup guard** (`apps/api/src/lib/config.ts`): with `NODE_ENV=production` the
@@ -81,6 +82,21 @@ setting is wired in `apps/api/src/index.ts` (`app.set("trust proxy", ...)`) and
 asserted by `trustProxy.test.ts`, which proves that rotating the header does
 not reset the login limiter with trust proxy off, and that only the
 proxy-appended rightmost address is used with `TRUST_PROXY=1`.
+
+### Retention purge
+
+The API does not purge rows on request paths. Schedule this command on the API
+host (for example, once daily):
+
+```bash
+pnpm --filter @slotwise/api purge:retention
+```
+
+It removes canceled bookings older than 90 days and completed bookings older
+than 24 months, plus their outbox payloads, in one transaction. Override the
+windows or batch size with the `RETENTION_*` variables; values are positive
+integers and malformed values fail fast. The command emits one JSON summary and
+exits; it does not run as a long-lived worker.
 
 ---
 

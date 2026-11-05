@@ -1,7 +1,7 @@
 # Slotwise — Progress
 
-Last updated: 2026-11-05 (CI run #13 green; Task A complete on
-`fix/trust-proxy`; Task B verification in progress on `fix/eefd009-review`).
+Last updated: 2026-11-05 (CI run #13 green; Task A and Task B complete;
+NFR-04 retention purge in progress on `fix/nfr04-retention-purge`).
 
 ## Current milestone
 
@@ -28,6 +28,11 @@ Task A (`fix/trust-proxy`, based on `fix/ci-setup`) wires the explicit
 production, and adds X-Forwarded-For/rate-limit tests. Task B is being verified
 on `fix/eefd009-review`; it adds auth token swap/deleted-user tests, an atomic
 availability replacement failure test, and overlap boundary coverage.
+
+NFR-04 adds the operator-scheduled `purge:retention` command. It removes
+canceled bookings after 90 days and completed bookings after 24 months by
+default, with positive-integer environment overrides and transactional outbox
+cleanup. The windows and batch behaviour are integration-tested.
 
 M7 "parity & traceability" is **complete** on `m7-parity` and awaiting GATE 5.
 M8, M9, M10 and Phase 11 are **not** started and will not start without explicit
