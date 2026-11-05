@@ -448,6 +448,50 @@ describe("F03 management", () => {
     expect(storedB.startAt.toISOString()).toBe(second.startAt);
   });
 
+  it("F03-E2: back-to-back bookings are allowed but a one-minute overlap blocks rescheduling", async () => {
+    const { agent, userId } = await createOwner({ prefix: "f03boundary" });
+    track(userId);
+    const ev = await createEvent(agent, { title: "Boundary overlap", durationMinutes: 30 });
+    const slots = await listSlots(ev.slug, { spanDays: 5 });
+    expect(slots.length).toBeGreaterThanOrEqual(3);
+
+    // A booking ending exactly when the next one starts is not an overlap.
+    const first = await book(ev.slug, slots[0]);
+    const adjacent = await book(ev.slug, slots[1]);
+    expect(first.status).toBe(201);
+    expect(adjacent.status).toBe(201);
+    expect(new Date(first.body.booking.endAt).toISOString()).toBe(slots[1].startAt);
+
+    // A one-minute overlap is rejected by the same database exclusion
+    // constraint used by the booking transaction. It cannot be inserted as a
+    // fixture, which is the important invariant: no pair of confirmed rows can
+    // bypass the overlap protection between the application query and commit.
+    const target = new Date(slots[2].startAt);
+    const conflictStart = new Date(target.getTime() - 60_000);
+    const conflictEnd = new Date(conflictStart.getTime() + ev.durationMinutes * 60_000);
+    await expect(
+      prisma.booking.create({
+        data: {
+          userId,
+          eventTypeId: ev.id,
+          inviteeName: "Boundary fixture",
+          inviteeEmail: uniqueEmail("boundary-fixture"),
+          startAt: conflictStart,
+          endAt: conflictEnd,
+          timezone: "UTC",
+          status: "confirmed",
+          idempotencyKey: `boundary-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        },
+      }),
+    ).rejects.toThrow(/bookings_no_host_overlap|23P01|conflicting key value/i);
+
+    // The existing reschedule test covers the endpoint's narrowed overlap
+    // query and rollback; this assertion covers its one-minute boundary at the
+    // database boundary where concurrent writers are finally serialized.
+    const unchanged = await prisma.booking.findUniqueOrThrow({ where: { id: first.body.booking.id } });
+    expect(unchanged.startAt.toISOString()).toBe(slots[0].startAt);
+  });
+
   it("F03-N1: invalid and expired tokens reveal nothing", async () => {
     const { agent, userId } = await createOwner({ prefix: "f03n1" });
     track(userId);

@@ -225,4 +225,71 @@ describe("auth token kinds and account state", () => {
     expect(res.status).toBe(401);
     expect(sessionCookieHeader(res.headers as Record<string, unknown>)).toBeNull();
   });
+
+  it("an already-issued session stops working when the account is soft-deleted", async () => {
+    const owner = await createOwner({ prefix: "deleted-session" });
+    createdUserIds.push(owner.userId);
+    expect((await owner.agent.get("/api/v1/auth/me")).status).toBe(200);
+
+    await prisma.user.update({ where: { id: owner.userId }, data: { deletedAt: new Date() } });
+
+    // The cookie is still cryptographically valid and the row is not revoked;
+    // the account state is what must stop it.
+    const after = await owner.agent.get("/api/v1/auth/me");
+    expect(after.status).toBe(401);
+    expect(after.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  // The prefix is the only thing separating the three token kinds (the schema
+  // has no token table). Rejecting at the *wrong* endpoint is not enough on its
+  // own: the row must still be usable at the right one, otherwise the test
+  // would pass on a missing row rather than on the prefix check.
+  it("a reset token cannot be spent at the email-verification endpoint", async () => {
+    const owner = await createOwner({ prefix: "swap-reset-verify", verified: false });
+    createdUserIds.push(owner.userId);
+
+    const rawReset = `reset:${Date.now()}${Math.random().toString(36).slice(2)}`;
+    await prisma.session.create({
+      data: { userId: owner.userId, tokenHash: hashToken(rawReset), expiresAt: new Date(Date.now() + 3_600_000) },
+    });
+
+    const atVerify = await request(app).post("/api/v1/auth/verify-email").send({ token: rawReset });
+    expect(atVerify.status).toBe(400);
+    expect(atVerify.body.error.code).toBe("VALIDATION_ERROR");
+
+    const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: owner.userId } });
+    expect(unchanged.emailVerifiedAt).toBeNull();
+
+    // Same row, right endpoint: still a valid reset token.
+    const atReset = await request(app)
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token: rawReset, password: "swapped-password-123" });
+    expect(atReset.status).toBe(200);
+  });
+
+  it("a verification token cannot be spent at the password-reset endpoint", async () => {
+    const owner = await createOwner({ prefix: "swap-verify-reset", verified: false });
+    createdUserIds.push(owner.userId);
+
+    const rawVerify = `verify:${Date.now()}${Math.random().toString(36).slice(2)}`;
+    await prisma.session.create({
+      data: { userId: owner.userId, tokenHash: hashToken(rawVerify), expiresAt: new Date(Date.now() + 3_600_000) },
+    });
+
+    const atReset = await request(app)
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token: rawVerify, password: "swapped-password-123" });
+    expect(atReset.status).toBe(400);
+    expect(atReset.body.error.code).toBe("VALIDATION_ERROR");
+
+    // The password was not changed by the rejected request.
+    const oldPassword = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: owner.email, password: PASSWORD });
+    expect(oldPassword.status).toBe(200);
+
+    // Same row, right endpoint: still a valid verification token.
+    const atVerify = await request(app).post("/api/v1/auth/verify-email").send({ token: rawVerify });
+    expect(atVerify.status).toBe(200);
+  });
 });
