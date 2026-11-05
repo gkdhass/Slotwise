@@ -51,9 +51,9 @@ All commands are the root `package.json` scripts, run from the repository root.
 | Lint | `pnpm lint` | 3 packages | — | **PASS** (0 errors, 0 warnings) |
 | Typecheck | `pnpm typecheck` | 3 packages | — | **PASS** |
 | Build | `pnpm build` | web + api | — | **PASS** (web 201.34 kB / 62.95 kB gzip) |
-| Unit | `pnpm test:unit` | 8 | **40** | **PASS** (shared 10, api 25, web 5) |
-| Integration | `pnpm test:integration` | 6 | **48** | **PASS** |
-| Security | `pnpm test:security` | 1 | **16** | **PASS** |
+| Unit | `pnpm test:unit` | 8 | **42** | **PASS** (shared 10, api 25, web 7) |
+| Integration | `pnpm test:integration` | 8 | **63** | **PASS** |
+| Security | `pnpm test:security` | 2 | **28** | **PASS** |
 | Concurrency | `pnpm test:concurrency` | 1 | **2** | **PASS** |
 | E2E | `pnpm test:e2e --retries=0` | 4 | **16** | **PASS** (2.0-2.2 min, three consecutive runs) |
 | Dependency audit | `pnpm audit --audit-level=high` | — | — | **PASS** (0 critical, 0 high; 3 moderate accepted, §12) |
@@ -63,10 +63,10 @@ All commands are the root `package.json` scripts, run from the repository root.
 `--retries=0` is used for the E2E run on purpose: a green run must be a first-try
 green run. (CI keeps Playwright's `retries=1` and uploads traces on failure.)
 
-Total: **122 automated tests** (40 + 48 + 16 + 2 + 16), all passing, plus the
-six-step database verification and the load harness. The count rose from 115 at
-the M6 gate to 122 with seven regression tests added during M6 close-out and M7 (`F01-E2` range cap,
-`F02-H3` windowed-booking query, two shared label-cache/limit unit tests).
+Total: **151 automated tests** (42 + 63 + 28 + 2 + 16), all passing, plus the
+six-step database verification and the load harness. The additional coverage
+includes retention-purge, availability atomicity, authentication hardening,
+X-Forwarded-For, and modal accessibility tests.
 
 ---
 
@@ -89,7 +89,7 @@ IDs come from `docs/00_ANALYSIS.md`. "Where" is the file that proves it.
 | NFR-01 | Read API p95 < 500 ms | `scripts/load.mjs`, `docs/perf/*.json`, §9.4 | PASS on local PostgreSQL 18.3 — Neon latency not measured (§11) |
 | NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | `tests/e2e/a11y.spec.ts`, `apps/web/src/components/Dialog.test.tsx`, `docs/A11Y_MANUAL_CHECKLIST.md` | **PARTIAL** - automated axe/contrast/keyboard/reflow pass and modal focus tests; owner NVDA/manual sign-off pending (§7) |
 | NFR-03 | Zero double bookings | concurrency suite + exclusion constraint probe | PASS |
-| NFR-04 | Minimal invitee data, retention, deletion path | `accountDeletion.test.ts` (7), `docs/PRIVACY.md` | **PARTIAL** — deletion proven; retention is policy + manual, no purge job (`docs/PRIVACY.md` §5) |
+| NFR-04 | Minimal invitee data, retention, deletion path | `accountDeletion.test.ts` (7), `retentionPurge.test.ts`, `apps/api/src/services/retentionPurge.ts`, `docs/PRIVACY.md` | **PARTIAL** — deletion and configurable purge are implemented/tested; host scheduling and backup-expiry evidence remain pending |
 | NFR-05 | Structured logs, request ids, `/health`, monitor hook | `logger.test.ts` (5), `requestId.test.ts` (5), `errorMonitor.test.ts` (7), `health.test.ts` (2), `observability.test.ts` (4) | PASS |
 | NFR-06 | Verified at 390 px and 1440 px (also 768/1024) | `a11y.spec.ts` axe scans + reflow test | PASS |
 

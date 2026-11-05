@@ -1,7 +1,7 @@
 # Slotwise — Progress
 
-Last updated: 2026-11-05 (CI run #13 green; Task A, Task B and NFR-04 complete;
-NFR-02 accessibility work in progress on `fix/nfr02-accessibility`).
+Last updated: 2026-11-05 (PRs #8 and #9 merged; main CI green; progress
+documentation refreshed against main).
 
 ## Current milestone
 
@@ -32,16 +32,16 @@ availability replacement failure test, and overlap boundary coverage.
 NFR-04 adds the operator-scheduled `purge:retention` command. It removes
 canceled bookings after 90 days and completed bookings after 24 months by
 default, with positive-integer environment overrides and transactional outbox
-cleanup. The windows and batch behaviour are integration-tested.
+cleanup. The windows and batch behaviour are integration-tested. The command is
+implemented and merged; host scheduling remains an operational deployment task.
 
 NFR-02 adds a real modal focus trap, Escape handling, focus restoration and
 unique dialog labelling, with web unit coverage. `docs/A11Y_MANUAL_CHECKLIST.md`
 is ready for the owner's Windows/NVDA pass; NFR-02 remains partial until that
 human sign-off is recorded.
 
-M7 "parity & traceability" is **complete** on `m7-parity` and awaiting GATE 5.
-M8, M9, M10 and Phase 11 are **not** started and will not start without explicit
-authorisation.
+M7 "parity & traceability" is complete. M8, M9, M10 and Phase 11 are not
+started and will not start without explicit authorisation.
 
 Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 
@@ -57,7 +57,7 @@ Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 | M4 UX fixes | Complete | setup guidance, time-zone clarity, conflict recovery, policy preview |
 | M5 Backend swap-in | Complete | All screens on the real API; E2E against real API + DB; security suite |
 | M6 Test & bug-fix | Complete | GATE 4 accepted 2026-10-28; conditions applied on `m6-testing` |
-| M7 Parity & traceability | In progress | `m7-parity`: parity score, `docs/TRACEABILITY.md`, gap list, `docs/REPORT_OUTLINE.md`, README clean-clone test |
+| M7 Parity & traceability | Complete | Requirement score, `docs/TRACEABILITY.md`, gap list, report outline, README clean-clone test |
 | M8 Rebrand sweep | Not started | |
 | M9 Launch assets | Not started | |
 | M10 Deploy | Not started | Hard-blocked on Neon verification (DEV-13) |
@@ -127,7 +127,7 @@ Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
    "Continue" stayed enabled. The screen now clears the list and the selection
    whenever the `(slug, date, zone)` query changes, and a new E2E test pins it.
 
-## Test status (all executed 2026-10-28, final code state, no skips)
+## Test status (main baseline before this documentation branch)
 
 
 | Command | Result |
@@ -135,16 +135,16 @@ Full evidence, commands, counts and caveats: **`docs/TEST_REPORT.md`**.
 | `pnpm lint` | 0 errors, 0 warnings (3 packages) |
 | `pnpm typecheck` | clean (3 packages) |
 | `pnpm build` | web 201.34 kB / 62.95 kB gzip; api bundle 62.9 kB |
-| `pnpm test:unit` | **40 passed** — shared 10, api 25, web 5 |
-| `pnpm test:integration` | **48 passed** (6 files) |
-| `pnpm test:security` | **16 passed** |
+| `pnpm test:unit` | **42 passed** — shared 10, api 25, web 7 |
+| `pnpm test:integration` | **63 passed** (8 files) |
+| `pnpm test:security` | **28 passed** (2 files) |
 | `pnpm test:concurrency` | **2 passed** |
 | `pnpm test:e2e --retries=0` | **16 passed** (2.0-2.2 min, three consecutive runs) |
 | `pnpm audit --audit-level=high` | **PASS** — 0 critical, 0 high, 3 moderate accepted (DEV-23) |
 | `pnpm verify:neon` | **PASS 6/6** in 68.6 s — run against **local PostgreSQL 18.3**, not Neon |
 | `pnpm perf --autocannon` | **PASS** ×3 — `/slots` p95 184.6 / 212.0 / 210.7 ms; `/public/:slug` p95 59.5 / 61.7 / 65.9 ms |
 
-122 automated tests total (40 + 48 + 16 + 2 + 16). Required Gate 3 test IDs remain
+151 automated tests total (42 + 63 + 28 + 2 + 16). Required Gate 3 test IDs remain
 present and passing in `apps/api/tests/integration/flows.test.ts`: F00-H1, F00-E1,
 F00-N1, F01-H1, F01-E1, F01-N1, F02-H1, F02-E1, F02-N1, F02-H2, F03-H1, F03-E1,
 F03-N1, F03-H2, plus F01-H2 (archive), F01-E2 (31-day cap), F02-H3 (windowed
