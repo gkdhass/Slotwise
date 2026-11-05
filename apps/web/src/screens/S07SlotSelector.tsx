@@ -82,10 +82,19 @@ export default function S07SlotSelector() {
     // visible slots and the selection in step with the query.
     setSlots([]);
     setSelected(null);
+    // A native date input reports an empty value while it is being edited (the
+    // user clears a segment, or keyboard entry has not reached a full date yet).
+    // `new Date("T00:00:00Z")` is Invalid Date and the toISOString() calls below
+    // would throw inside this effect, unmounting the screen. Wait for a complete
+    // date instead of querying with a non-date.
+    const base = new Date(`${date}T00:00:00Z`).getTime();
+    if (!date || Number.isNaN(base)) {
+      setLoading(false);
+      return;
+    }
     // Query a 3-day window so any zone offset is covered, then filter to the
     // chosen date in the event's time zone. The window is clamped to the API's
     // documented maximum (MAX_SLOT_RANGE_DAYS) so client and server cannot drift.
-    const base = new Date(`${date}T00:00:00Z`).getTime();
     const from = new Date(base - 86_400_000).toISOString();
     const to = new Date(Math.min(base + 2 * 86_400_000, base + MAX_SLOT_RANGE_DAYS * 86_400_000)).toISOString();
     getSlots(slug, from, to, tz)
