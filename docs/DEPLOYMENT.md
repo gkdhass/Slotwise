@@ -45,6 +45,7 @@ Names only — never commit values. `.env.example` lists the same names.
 | `SESSION_SECRET` | yes, ≥ 16 chars | Session cookie signing/derivation. Startup refuses to run without it. |
 | `CSRF_SECRET` | yes | Double-submit CSRF token secret. |
 | `APP_BASE_URL` | yes | Absolute base URL used in emails and manage links. |
+| `TRUST_PROXY` | yes (exact hop count) | Number of reverse-proxy hops in front of the API. `1` on Render/Railway. Controls whether `X-Forwarded-For` is believed. Startup refuses to run without an exact positive integer. |
 | `EMAIL_PROVIDER` | yes (`resend`) | `console` is the dev transport and logs email content. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | when `EMAIL_PROVIDER=resend` | Delivery. |
 | `WORKER_SECRET` | yes if the HTTP worker route is exposed | Authenticates `POST /api/v1/worker/run-outbox`. |
@@ -57,8 +58,29 @@ Names only — never commit values. `.env.example` lists the same names.
 
 **Startup guard** (`apps/api/src/lib/config.ts`): with `NODE_ENV=production` the
 process refuses to start if `CSRF_DISABLED=true`, if `SESSION_SECRET` is missing
-or shorter than 16 characters, or if `DATABASE_URL` is unset. This is proven by
-`apps/api/tests/security/security.test.ts`.
+or shorter than 16 characters, if `DATABASE_URL` is unset, or if `TRUST_PROXY`
+is not an exact positive integer number of proxy hops. This is proven by
+`apps/api/tests/security/security.test.ts` and
+`apps/api/tests/security/trustProxy.test.ts`.
+
+### TRUST_PROXY — why it must be exact
+
+`req.ip` feeds the per-IP rate-limit key. Express takes `req.ip` from
+`X-Forwarded-For` only as far as `trust proxy` tells it to:
+
+| `TRUST_PROXY` | `req.ip` | Behaviour |
+| --- | --- | --- |
+| unset / `false` / `0` | socket peer address | Header ignored. Correct for local dev, tests, and a directly exposed port. |
+| `1` | rightmost `X-Forwarded-For` entry | The address the single proxy appended. Anything the client prepends is ignored, so rotating the header cannot reset a bucket. |
+| `true` | leftmost entry | **Never use.** The client controls that value, so every request can claim a new IP and bypass per-IP limits. |
+
+On Render or Railway (D-07) the API sits behind exactly one edge proxy, so the
+deployment sets `TRUST_PROXY=1`. If a CDN or WAF is placed in front later, the
+hop count changes — measure it rather than guessing, then update the value. The
+setting is wired in `apps/api/src/index.ts` (`app.set("trust proxy", ...)`) and
+asserted by `trustProxy.test.ts`, which proves that rotating the header does
+not reset the login limiter with trust proxy off, and that only the
+proxy-appended rightmost address is used with `TRUST_PROXY=1`.
 
 ---
 
