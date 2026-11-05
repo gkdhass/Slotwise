@@ -87,7 +87,7 @@ IDs come from `docs/00_ANALYSIS.md`. "Where" is the file that proves it.
 | FR-09 | Clear setup/conflict messages | `core-loop.spec.ts` "a taken slot returns to slot selection…" (conflict recovery proven), `apps/web/src/App.test.tsx` (5) | **PARTIAL** — setup guidance is implemented but not usability-tested (`docs/PARITY.md`) |
 | FR-10 | Paid bookings | not built (D-08) | N/A by decision — scored 0 in `docs/PARITY.md` |
 | NFR-01 | Read API p95 < 500 ms | `scripts/load.mjs`, `docs/perf/*.json`, §9.4 | PASS on local PostgreSQL 18.3 — Neon latency not measured (§11) |
-| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | `tests/e2e/a11y.spec.ts`, `docs/a11y/contrast-390.json`, `contrast-1440.json` | **PARTIAL** — automated axe/contrast/keyboard/reflow pass; no manual WCAG audit or screen-reader pass (§7) |
+| NFR-02 | WCAG 2.2 AA, keyboard core loop, axe clean | `tests/e2e/a11y.spec.ts`, `apps/web/src/components/Dialog.test.tsx`, `docs/A11Y_MANUAL_CHECKLIST.md` | **PARTIAL** - automated axe/contrast/keyboard/reflow pass and modal focus tests; owner NVDA/manual sign-off pending (§7) |
 | NFR-03 | Zero double bookings | concurrency suite + exclusion constraint probe | PASS |
 | NFR-04 | Minimal invitee data, retention, deletion path | `accountDeletion.test.ts` (7), `docs/PRIVACY.md` | **PARTIAL** — deletion proven; retention is policy + manual, no purge job (`docs/PRIVACY.md` §5) |
 | NFR-05 | Structured logs, request ids, `/health`, monitor hook | `logger.test.ts` (5), `requestId.test.ts` (5), `errorMonitor.test.ts` (7), `health.test.ts` (2), `observability.test.ts` (4) | PASS |
@@ -229,7 +229,16 @@ The eight real pairs, worst first:
 Artifacts: `docs/a11y/contrast-390.json`, `docs/a11y/contrast-1440.json` (one entry
 per sampled text node, with screen, viewport, font size/weight and ratio). The
 booking-reference UUID inside them changes between runs because the E2E booking
-differs; nothing else does.
+differs; nothing else does. These files are generated and git-ignored; see
+`docs/a11y/README.md`.
+
+### Manual WCAG and NVDA pass — owner action
+
+The automated checks do not establish screen-reader semantics or a human WCAG
+review. Run `docs/A11Y_MANUAL_CHECKLIST.md` on Windows with NVDA, record each
+S01–S11 result and the booking-loop result there, then copy findings and the
+signed outcome into this section. Until that is completed, NFR-02 remains
+**PARTIAL** rather than being reported as a human-verified pass.
 
 ---
 
