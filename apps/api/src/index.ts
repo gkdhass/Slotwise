@@ -9,7 +9,7 @@ import { requestId } from "./middleware/requestId.js";
 import { loadSession, requireAuth } from "./middleware/auth.js";
 import { issueCsrf, csrfProtect } from "./middleware/csrf.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import { assertProductionSafety, corsAllowList } from "./lib/config.js";
+import { assertProductionSafety, corsAllowList, trustProxySetting } from "./lib/config.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import authRoutes from "./routes/auth.js";
@@ -22,7 +22,10 @@ import manageRoutes from "./routes/manage.js";
 assertProductionSafety();
 
 const app: Express = express();
-app.set("trust proxy", 1);
+// Explicit, environment-driven: see trustProxySetting() in lib/config.ts.
+// Default false means X-Forwarded-For is ignored, so a client cannot rotate
+// the header to reset per-IP rate-limit buckets.
+app.set("trust proxy", trustProxySetting());
 
 app.use(requestId as any);
 app.use(

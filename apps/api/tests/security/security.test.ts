@@ -268,6 +268,8 @@ describe("production startup guard", () => {
       CSRF_DISABLED: "false",
       SESSION_SECRET: "a-production-session-secret",
       DATABASE_URL: "postgresql://u:p@db.example/app",
+      // Production must state the exact proxy hop count (D-07 / A-10).
+      TRUST_PROXY: "1",
     };
     expect(() => assertProductionSafety(safe as NodeJS.ProcessEnv)).not.toThrow();
 
