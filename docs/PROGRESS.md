@@ -1,7 +1,7 @@
 # Slotwise — Progress
 
-Last updated: 2026-11-05 (CI run #13 green; Task A and Task B complete;
-NFR-04 retention purge in progress on `fix/nfr04-retention-purge`).
+Last updated: 2026-11-05 (CI run #13 green; Task A, Task B and NFR-04 complete;
+NFR-02 accessibility work in progress on `fix/nfr02-accessibility`).
 
 ## Current milestone
 
@@ -33,6 +33,11 @@ NFR-04 adds the operator-scheduled `purge:retention` command. It removes
 canceled bookings after 90 days and completed bookings after 24 months by
 default, with positive-integer environment overrides and transactional outbox
 cleanup. The windows and batch behaviour are integration-tested.
+
+NFR-02 adds a real modal focus trap, Escape handling, focus restoration and
+unique dialog labelling, with web unit coverage. `docs/A11Y_MANUAL_CHECKLIST.md`
+is ready for the owner's Windows/NVDA pass; NFR-02 remains partial until that
+human sign-off is recorded.
 
 M7 "parity & traceability" is **complete** on `m7-parity` and awaiting GATE 5.
 M8, M9, M10 and Phase 11 are **not** started and will not start without explicit
