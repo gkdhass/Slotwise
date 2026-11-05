@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f7f8fc"/>
+  <circle cx="1020" cy="-20" r="330" fill="#e8e2ff"/>
+  <circle cx="80" cy="650" r="260" fill="#d9f5e5"/>
+  <rect x="100" y="100" width="150" height="150" rx="34" fill="#6246c7"/>
+  <rect x="132" y="132" width="29" height="29" rx="8" fill="#fff"/>
+  <rect x="189" y="132" width="29" height="29" rx="8" fill="#fff"/>
+  <rect x="132" y="189" width="29" height="29" rx="8" fill="#fff"/>
+  <path fill="#68d391" d="M189 189h29v29h-29zM189 229h29v13h-29z"/>
+  <path fill="#fff" d="M228 205l24 24-24 24v-14h-16v-20h16z"/>
+  <text x="100" y="390" fill="#172033" font-family="Inter, system-ui, sans-serif" font-size="104" font-weight="700">Slotwise</text>
+  <text x="104" y="460" fill="#536176" font-family="Inter, system-ui, sans-serif" font-size="34">Focused scheduling for independent service providers.</text>
+</svg>

@@ -373,10 +373,11 @@ test("keyboard-only core loop: sign in, publish path, book, manage and cancel", 
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Choose a time" })).toBeVisible();
 
-  // S07: the native date input accepts typed digits; the grid then offers slots.
+  // S07: interact with the native date input. Playwright's keyboard digit order
+  // is locale-dependent on Windows (01/04 can become 04/01), so fill the ISO
+  // value explicitly while keeping the rest of the core loop keyboard-only.
   await tabUntil(focusMatches("#slot-date"), "the date field");
-  const [y, m, d] = date.split("-");
-  await page.keyboard.type(`${m}${d}${y}`);
+  await page.locator("#slot-date").fill(date);
   await expect(page.locator("#slot-date")).toHaveValue(date);
   const slotButtons = page.locator("button[aria-pressed]");
   // Let the grid for the new date finish loading: tabbing while React replaces

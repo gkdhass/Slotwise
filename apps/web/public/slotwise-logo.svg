@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 256" role="img" aria-labelledby="title desc">
+  <title id="title">Slotwise</title>
+  <desc id="desc">A geometric open-slot mark followed by the Slotwise wordmark.</desc>
+  <style>
+    .ink { fill: #6246c7; }
+    .open { fill: #16794b; }
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #b9a9ff; }
+      .open { fill: #68d391; }
+    }
+  </style>
+  <g transform="translate(16 16)">
+    <rect class="ink" width="224" height="224" rx="48"/>
+    <rect fill="#fff" x="48" y="48" width="44" height="44" rx="12"/>
+    <rect fill="#fff" x="108" y="48" width="44" height="44" rx="12"/>
+    <rect fill="#fff" x="48" y="108" width="44" height="44" rx="12"/>
+    <path class="open" d="M108 108h44v44h-44zM108 168h44v20h-44z"/>
+    <path fill="#fff" d="M167 139l28 28-28 28v-17h-18v-22h18z"/>
+  </g>
+  <text x="288" y="166" fill="currentColor" font-family="Inter, system-ui, sans-serif" font-size="112" font-weight="700" letter-spacing="-5">Slotwise</text>
+</svg>
