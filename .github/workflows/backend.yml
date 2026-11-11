@@ -1,0 +1,70 @@
+name: backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "docker-compose*.yml"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "docker-compose*.yml"
+      - ".github/workflows/backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7.4.12-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      SECURITY_SECRET_KEY: test-only-secret-key-0123456789abcdef0123456789abcdef
+      MINIO_SECRET_KEY: test-only-minio-secret
+      DATABASE_URL: postgresql+asyncpg://slotwise:test@localhost:5432/slotwise_test
+      REDIS_URL: redis://localhost:6379/0
+      TEST_REDIS_URL: redis://localhost:6379/0
+      OPENSEARCH_URL: http://localhost:9200
+      MINIO_ENDPOINT: http://localhost:9000
+      MLFLOW_TRACKING_URI: http://localhost:5000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Ruff
+        working-directory: backend
+        run: |
+          ruff check app tests
+          ruff format --check app tests
+
+      - name: mypy (strict)
+        working-directory: backend
+        run: mypy app
+
+      - name: Unit tests
+        working-directory: backend
+        run: pytest -m "not integration" --cov=app --cov-report=term-missing
+
+      - name: Worker integration test
+        working-directory: backend
+        run: pytest -m integration

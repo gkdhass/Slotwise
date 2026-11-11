@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slotwise-ml"
+version = "0.1.0"
+description = "Slotwise Module A/B feature, training, evaluation, export and serving packages"
+requires-python = ">=3.11,<3.13"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["data*", "features*", "training*", "evaluation*", "export*", "serving*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

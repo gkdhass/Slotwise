@@ -1,0 +1,62 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-toml
+      - id: check-json
+        exclude: ^frontend/tsconfig\.json$
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key
+        exclude: ^infra/(nginx/certs|scripts)/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: ["--fix"]
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args:
+          - "--baseline"
+          - ".secrets.baseline"
+          # Deliberate, non-functional development placeholders. They are
+          # rejected outside dev/test by Settings validation.
+          - "--exclude-lines"
+          - "(dev-only-insecure-secret-key-change-me|dev-only-minio-password-change-me|slotwise:change-me@|test-only-secret-key-|test-only-minio-secret|slotwise:test@|slotwise:strong-password@|user:db-secret@|p@ssw0rd|nested-secret)"
+        exclude: ^(frontend/package-lock\.json|infra/nginx/certs/.*)$
+
+  - repo: local
+    hooks:
+      - id: backend-mypy
+        name: mypy (backend, strict)
+        entry: python -m mypy --config-file backend/pyproject.toml
+        args: ["backend/app"]
+        language: system
+        pass_filenames: false
+        files: ^backend/(app|tests)/.*\.py$
+
+      - id: frontend-prettier
+        name: prettier (frontend)
+        entry: npm --prefix frontend run format:check
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+
+      - id: frontend-eslint
+        name: eslint (frontend)
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$

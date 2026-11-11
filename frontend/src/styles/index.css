@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-navy: #10243a;
+  --color-deep-blue: #183b56;
+  --color-teal: #16a6a1;
+  --color-pale-cyan: #ddf5f3;
+  --color-critical: #c94c4c;
+  --color-warning: #f2b544;
+  --color-surface: #f7fafc;
+  --font-sans: "DejaVu Sans", Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply bg-surface text-ink antialiased;
+    margin: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}

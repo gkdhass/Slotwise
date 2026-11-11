@@ -1,0 +1,382 @@
+# Slotwise Phase 1 stack.
+# Security posture: only Nginx publishes host ports; every other service is
+# reachable only on the private Compose network. Secrets are injected through
+# environment variables (Compose .env or the caller's environment).
+
+x-backend-env: &backend-env
+  APP_ENV: ${APP_ENV:-dev}
+  APP_NAME: ${APP_NAME:-Slotwise}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_DOCS_ENABLED: ${APP_DOCS_ENABLED:-true}
+  APP_ALLOWED_HOSTS: ${APP_ALLOWED_HOSTS:-localhost,127.0.0.1,api,nginx}
+  APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-https://localhost,http://localhost:5173}
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-slotwise}:${POSTGRES_PASSWORD:-slotwise-dev-password}@postgres:5432/${POSTGRES_DB:-slotwise}
+  REDIS_URL: redis://redis:6379/0
+  REDIS_QUEUE_NAMES: ${REDIS_QUEUE_NAMES:-celery}
+  OPENSEARCH_URL: http://opensearch:9200
+  OPENSEARCH_USERNAME: ${OPENSEARCH_USERNAME:-}
+  OPENSEARCH_PASSWORD: ${OPENSEARCH_PASSWORD:-}
+  MINIO_ENDPOINT: http://minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-slotwise}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-slotwise-dev-minio-password}
+  MINIO_BUCKET: ${MINIO_BUCKET:-slotwise-artifacts}
+  MINIO_SECURE: "false"
+  MLFLOW_TRACKING_URI: http://mlflow:5000
+  MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-slotwise}
+  SECURITY_SECRET_KEY: ${SECURITY_SECRET_KEY:-dev-only-insecure-secret-key-change-me}
+  MODULE_B_ENABLED: ${MODULE_B_ENABLED:-false}
+  ALLOW_SELF_APPROVAL: ${ALLOW_SELF_APPROVAL:-false}
+
+services:
+  certs-init:
+    image: alpine/openssl:3.5.4
+    container_name: slotwise-certs-init
+    user: "0:0"
+    volumes:
+      - nginx-certs:/certs
+      - ./infra/scripts:/scripts:ro
+    entrypoint: ["/bin/sh", "/scripts/generate-certs.sh", "/certs"]
+    restart: "no"
+    networks:
+      - slotwise
+
+  postgres:
+    image: postgres:16.15-alpine
+    container_name: slotwise-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-slotwise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-slotwise-dev-password}
+      POSTGRES_DB: ${POSTGRES_DB:-slotwise}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-create-mlflow.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  redis:
+    image: redis:7.4.12-alpine
+    container_name: slotwise-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    container_name: slotwise-opensearch
+    environment:
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      # DEV ONLY: the security plugin is disabled because the service is not
+      # published and the network is private. Production must enable TLS,
+      # authentication and least-privilege roles.
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  minio:
+    # Upstream MinIO removed its community images from Docker Hub in September
+    # 2026 and now ships source only. Silo is the maintained, S3-compatible
+    # drop-in fork; the pinned release below bundles the server, `mc` and curl.
+    image: pgsty/silo:RELEASE.2026-11-09T00-00-00Z
+    container_name: slotwise-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-slotwise}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-slotwise-dev-minio-password}
+      MINIO_BROWSER_REDIRECT_URL: https://localhost/minio-console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  minio-init:
+    # Same pinned Silo image: it ships `/usr/bin/mc` plus a POSIX shell, so the
+    # bucket bootstrap needs no additional image or runtime download.
+    image: pgsty/silo:RELEASE.2026-11-09T00-00-00Z
+    container_name: slotwise-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-slotwise}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-slotwise-dev-minio-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-slotwise-artifacts}
+      MINIO_MLFLOW_BUCKET: ${MINIO_MLFLOW_BUCKET:-slotwise-mlflow}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$MINIO_BUCKET"
+        mc mb --ignore-existing "local/$$MINIO_MLFLOW_BUCKET"
+        mc anonymous set none "local/$$MINIO_BUCKET"
+        mc anonymous set none "local/$$MINIO_MLFLOW_BUCKET"
+    restart: "no"
+    networks:
+      - slotwise
+
+  mlflow:
+    build:
+      context: ./infra/docker/mlflow
+    image: slotwise/mlflow:3.18.0
+    container_name: slotwise-mlflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-slotwise}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-slotwise-dev-minio-password}
+      AWS_DEFAULT_REGION: us-east-1
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - postgresql://${POSTGRES_USER:-slotwise}:${POSTGRES_PASSWORD:-slotwise-dev-password}@postgres:5432/mlflow
+      - --artifacts-destination
+      - s3://${MINIO_MLFLOW_BUCKET:-slotwise-mlflow}
+      - --serve-artifacts
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    image: slotwise/backend:0.1.0
+    container_name: slotwise-api
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+    image: slotwise/backend:0.1.0
+    container_name: slotwise-worker
+    command:
+      [
+        "celery",
+        "-A",
+        "app.workers.celery_app:celery_app",
+        "worker",
+        "--loglevel=INFO",
+        "--concurrency=2",
+        "--hostname=worker@%h",
+      ]
+    environment:
+      <<: *backend-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A app.workers.celery_app:celery_app inspect ping --timeout 5 >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    image: slotwise/frontend:0.1.0
+    container_name: slotwise-frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nginx-health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  nginx:
+    image: nginx:1.29.8-alpine
+    container_name: slotwise-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-certs:/etc/nginx/certs:ro
+    depends_on:
+      certs-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- https://127.0.0.1/nginx-health >/dev/null || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: slotwise-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/healthy >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: slotwise-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_SERVER_DOMAIN: localhost
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - slotwise
+
+networks:
+  slotwise:
+    name: slotwise-private
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  opensearch-data:
+  minio-data:
+  prometheus-data:
+  grafana-data:
+  nginx-certs:

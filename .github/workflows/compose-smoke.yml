@@ -1,0 +1,62 @@
+name: compose-smoke
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/**"
+      - "docker-compose*.yml"
+      - ".github/workflows/compose-smoke.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/**"
+      - "docker-compose*.yml"
+      - ".github/workflows/compose-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: slotwise-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Validate Compose configuration
+        run: docker compose -f docker-compose.yml config -q
+
+      - name: Build and start the stack
+        run: docker compose -f docker-compose.yml up -d --build
+
+      - name: Wait for readiness
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -kfsS https://localhost/api/v1/readyz -o /tmp/readyz.json; then
+              cat /tmp/readyz.json
+              exit 0
+            fi
+            echo "readiness attempt ${attempt}/60 failed"
+            sleep 5
+          done
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs --tail=200
+          exit 1
+
+      - name: Check public endpoints
+        run: |
+          curl -kfsS https://localhost/api/v1/healthz | grep -q '"status":"ok"'
+          curl -kfsS https://localhost/metrics | grep -q "http_requests_total"
+          curl -kfsS https://localhost/ | grep -qi "slotwise"
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose -f docker-compose.yml down -v --remove-orphans
