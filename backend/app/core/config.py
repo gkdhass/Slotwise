@@ -83,18 +83,33 @@ class DatabaseSettings(_EnvSettings):
     )
 
     url: str = "postgresql+asyncpg://slotwise:change-me@postgres:5432/slotwise"
+    # Alembic uses a DDL-capable role; the API/worker use the least-privilege
+    # application role in ``url``. When omitted, migrations reuse ``url``
+    # (convenient for a single-role local cluster).
+    migration_url: str | None = None
+    app_role: str = "slotwise_app"
+    migration_role: str = "slotwise_migrator"
     pool_size: int = Field(default=10, ge=1, le=100)
     max_overflow: int = Field(default=20, ge=0, le=100)
     pool_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     pool_recycle_seconds: int = Field(default=1800, ge=60)
+    connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
+    statement_timeout_ms: int = Field(default=15_000, ge=0, le=600_000)
+    application_name: str = "slotwise-api"
     echo: bool = False
 
-    @field_validator("url")
+    @field_validator("url", "migration_url")
     @classmethod
-    def _require_async_postgres_url(cls, value: str) -> str:
+    def _require_async_postgres_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
         if not value.startswith(("postgresql+asyncpg://", "postgresql+psycopg://")):
             raise ValueError("DATABASE_URL must use an async PostgreSQL driver")
         return value
+
+    @property
+    def effective_migration_url(self) -> str:
+        return self.migration_url or self.url
 
 
 class RedisSettings(_EnvSettings):
@@ -186,8 +201,45 @@ class SecuritySettings(_EnvSettings):
 
     secret_key: SecretStr = SecretStr(DEV_SECRET_KEY)
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
+    # ``jwt_secret_key`` is optional so existing deployments keep signing with
+    # SECURITY_SECRET_KEY. When set, it becomes the active signing key.
+    jwt_secret_key: SecretStr | None = None
+    jwt_key_id: str = "dev-1"
+    # Rotation: "kid:secret,kid:secret" parsed into a mapping. Old keys stay
+    # accepted for verification until the operator removes them.
+    jwt_previous_keys: Annotated[dict[str, str], NoDecode] = Field(default_factory=dict)
+    jwt_issuer: str = "slotwise"
+    jwt_audience: str = "slotwise-api"
+    jwt_leeway_seconds: int = Field(default=30, ge=0, le=300)
     access_token_expire_minutes: int = Field(default=15, ge=1, le=120)
+    refresh_token_expire_hours: int = Field(default=8, ge=1, le=168)
+    ws_ticket_ttl_seconds: int = Field(default=30, ge=5, le=300)
     max_request_body_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+
+    password_min_length: int = Field(default=12, ge=12, le=128)
+    argon2_time_cost: int = Field(default=3, ge=1, le=10)
+    argon2_memory_cost: int = Field(default=65_536, ge=8192, le=1_048_576)
+    argon2_parallelism: int = Field(default=4, ge=1, le=16)
+
+    lockout_threshold: int = Field(default=5, ge=1, le=100)
+    lockout_minutes: int = Field(default=15, ge=1, le=1440)
+
+    rate_limit_login_per_minute: int = Field(default=10, ge=1, le=10_000)
+    rate_limit_login_account_per_minute: int = Field(default=5, ge=1, le=10_000)
+    rate_limit_refresh_per_minute: int = Field(default=20, ge=1, le=10_000)
+    rate_limit_ticket_per_minute: int = Field(default=30, ge=1, le=10_000)
+    rate_limit_sensor_per_minute: int = Field(default=60, ge=1, le=10_000)
+
+    # ``__Secure-`` (not ``__Host-``): __Host- mandates Path=/ and forbids a
+    # Domain attribute, which conflicts with scoping the refresh cookie to the
+    # auth path. __Secure- still requires the Secure attribute, so the cookie
+    # cannot be sent over plaintext HTTP in production.
+    refresh_cookie_name: str = "__Secure-slotwise_refresh"
+    refresh_cookie_path: str = "/api/v1/auth"
+    refresh_cookie_secure: bool = True
+    refresh_cookie_samesite: Literal["strict", "lax", "none"] = "strict"
+    csrf_header_name: str = "X-Requested-With"
+    csrf_header_value: str = "slotwise-dashboard"
 
     @field_validator("secret_key")
     @classmethod
@@ -195,6 +247,35 @@ class SecuritySettings(_EnvSettings):
         if not value.get_secret_value().strip():
             raise ValueError("SECURITY_SECRET_KEY must not be blank")
         return value
+
+    @field_validator("jwt_previous_keys", mode="before")
+    @classmethod
+    def _parse_previous_keys(cls, value: object) -> object:
+        if isinstance(value, str):
+            if not value.strip():
+                return {}
+            parsed: dict[str, str] = {}
+            for part in value.split(","):
+                if not part.strip():
+                    continue
+                kid, separator, secret = part.partition(":")
+                if not separator or not kid.strip() or not secret.strip():
+                    raise ValueError("SECURITY_JWT_PREVIOUS_KEYS must be 'kid:secret[,kid:secret]'")
+                parsed[kid.strip()] = secret.strip()
+            return parsed
+        return value
+
+    @property
+    def active_jwt_secret(self) -> str:
+        value = self.jwt_secret_key or self.secret_key
+        return value.get_secret_value()
+
+    @property
+    def jwt_signing_keys(self) -> dict[str, str]:
+        """All accepted verification keys, active key last."""
+        keys = dict(self.jwt_previous_keys)
+        keys[self.jwt_key_id] = self.active_jwt_secret
+        return keys
 
 
 class FeatureSettings(_EnvSettings):
@@ -215,6 +296,30 @@ class FeatureSettings(_EnvSettings):
     allow_self_approval: bool = False
 
 
+class SeedSettings(_EnvSettings):
+    """Bootstrap account settings. The password is never defaulted."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="SEED_",
+        env_file=_ENV_FILES,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    admin_email: str = "admin@slotwise.local"
+    admin_password: SecretStr | None = None
+    admin_name: str = "Slotwise Administrator"
+    demo: bool = False
+    # Demo principal passwords. They are only consulted by ``seed --demo`` in a
+    # dev/test environment and are never defaulted, so a non-dev deployment
+    # cannot silently create a known account.
+    analyst_email: str = "analyst@slotwise.local"
+    analyst_password: SecretStr | None = None
+    viewer_email: str = "viewer@slotwise.local"
+    viewer_password: SecretStr | None = None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_ENV_FILES,
@@ -231,6 +336,7 @@ class Settings(BaseSettings):
     mlflow: MLflowSettings = Field(default_factory=MLflowSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     features: FeatureSettings = Field(default_factory=FeatureSettings)
+    seed: SeedSettings = Field(default_factory=SeedSettings)
 
     @model_validator(mode="after")
     def _reject_development_secrets_outside_dev(self) -> Settings:
@@ -244,6 +350,12 @@ class Settings(BaseSettings):
             insecure.append("MINIO_SECRET_KEY")
         if "change-me" in self.database.url or "slotwise:slotwise@" in self.database.url:
             insecure.append("DATABASE_URL")
+        
+        # Check for placeholder JWT secret
+        jwt_secret = self.security.active_jwt_secret
+        if "change-me" in jwt_secret.lower() or jwt_secret == DEV_SECRET_KEY:
+            insecure.append("JWT secret (still using placeholder/dev value in production)")
+            
         if insecure:
             joined = ", ".join(insecure)
             raise ValueError(
@@ -252,6 +364,31 @@ class Settings(BaseSettings):
 
         if len(self.security.secret_key.get_secret_value()) < 32:
             raise ValueError("SECURITY_SECRET_KEY must be at least 32 characters outside dev")
+        if len(self.security.active_jwt_secret) < 32:
+            raise ValueError("The JWT signing key must be at least 32 characters outside dev")
+        for kid, secret in self.security.jwt_previous_keys.items():
+            if len(secret) < 32:
+                raise ValueError(f"JWT rotation key {kid!r} is too short outside dev")
+        if not self.security.refresh_cookie_secure:
+            raise ValueError("SECURITY_REFRESH_COOKIE_SECURE must be true outside dev")
+            
+        # Require strong admin password outside dev
+        if self.seed.admin_password is None:
+            raise ValueError("SEED_ADMIN_PASSWORD is required in non-dev environments")
+        admin_pwd = self.seed.admin_password.get_secret_value()
+        if len(admin_pwd) < self.security.password_min_length:
+            raise ValueError(
+                f"SEED_ADMIN_PASSWORD must meet password complexity requirements "
+                f"(min length {self.security.password_min_length})"
+            )
+            
+        # Require explicit CORS origin allow-list outside dev
+        if not self.app.cors_origins or self.app.cors_origins == ["http://localhost:5173", "https://localhost"]:
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS must be explicitly set in non-dev environments "
+                "(APP_CORS_ORIGINS environment variable)"
+            )
+            
         return self
 
     @property

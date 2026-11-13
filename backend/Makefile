@@ -1,4 +1,4 @@
-.PHONY: install venv test lint typecheck fmt scan run worker migrate
+.PHONY: install venv test lint typecheck fmt scan run worker migrate seed seed-demo
 
 PYTHON ?= python
 
@@ -34,3 +34,9 @@ worker:
 
 migrate:
 	$(PYTHON) -m alembic upgrade head
+
+seed:
+	$(PYTHON) -m app.cli.seed
+
+seed-demo:
+	$(PYTHON) -m app.cli.seed --demo

@@ -31,12 +31,19 @@ logger = logging.getLogger(__name__)
 OPENAPI_TAGS = [
     {"name": "health", "description": "Liveness, readiness and dependency status."},
     {"name": "metrics", "description": "Prometheus exposition endpoint."},
+    {
+        "name": "auth",
+        "description": "Sign-in, refresh rotation, logout, password change and WebSocket tickets.",
+    },
     {"name": "events", "description": "Module A event ingestion (Phase 2+)."},
     {"name": "alerts", "description": "Unified alert triage (Phase 2+)."},
     {"name": "incidents", "description": "Incident workflow (Phase 2+)."},
     {"name": "response", "description": "Human-approved simulated response (Phase 4)."},
     {"name": "models", "description": "Model registry and evaluation evidence (Phase 2+)."},
-    {"name": "admin", "description": "Users, roles, sensors and audit (Phase 2+)."},
+    {
+        "name": "admin",
+        "description": "Users, roles, sensors, assets, response policies, allow-list and audit.",
+    },
 ]
 
 
@@ -89,7 +96,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=resolved.app.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Request-ID",
+            # Anti-CSRF header required on refresh/logout. Without it a browser
+            # preflight would block the dashboard before the request is made.
+            resolved.security.csrf_header_name,
+        ],
         expose_headers=["X-Request-ID"],
     )
     app.add_middleware(PrometheusMiddleware)
@@ -105,6 +119,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(metrics_router)
     app.include_router(v1_router, prefix=resolved.app.api_v1_prefix)
+
+    # Fail fast at import/startup if a route is added without an authorization
+    # dependency and without being added to the reviewed public allow-list. The
+    # test-suite calls the same function so a bypass cannot reach main.
+    from app.api.deps import assert_all_routes_authorized
+
+    assert_all_routes_authorized(app)
 
     return app
 

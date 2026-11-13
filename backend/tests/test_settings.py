@@ -84,6 +84,8 @@ def test_non_dev_accepts_strong_secrets(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv(
         "DATABASE_URL", "postgresql+asyncpg://slotwise:strong-password@db:5432/slotwise"
     )
+    monkeypatch.setenv("SEED_ADMIN_PASSWORD", "Strong-Admin-Password-For-Production-2026!")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://prod.example.com")
     settings = Settings()
     assert settings.app.env == "prod"
 

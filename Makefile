@@ -4,7 +4,7 @@ PYTHON ?= python
 NPM ?= npm
 COMPOSE ?= docker compose
 
-.PHONY: env up down logs test test-backend test-frontend lint typecheck fmt scan certs clean smoke
+.PHONY: env up down logs test test-backend test-frontend lint typecheck fmt scan certs clean smoke seed seed-demo migrate backup restore
 
 env:
 	@test -f .env || cp .env.example .env
@@ -64,6 +64,25 @@ smoke:
 	@curl -kfsS https://localhost/api/v1/healthz
 	@curl -kfsS https://localhost/api/v1/readyz
 	@curl -kfsS https://localhost/metrics >/dev/null
+
+seed:
+	$(COMPOSE) exec -T api python -m app.cli.seed
+
+seed-demo:
+	$(COMPOSE) exec -T api python -m app.cli.seed --demo
+
+seed-local:
+	cd backend && $(PYTHON) -m app.cli.seed $(if $(DEMO),--demo,)
+
+migrate:
+	$(COMPOSE) run --rm migrate
+
+backup:
+	@bash infra/scripts/backup-postgres.sh
+
+restore:
+	@test -n "$(FILE)" || (echo "usage: make restore FILE=backups/<dump>" && exit 1)
+	@bash infra/scripts/restore-postgres.sh "$(FILE)" $(if $(FORCE),--force,)
 
 clean:
 	$(COMPOSE) down -v --remove-orphans

@@ -21,6 +21,8 @@ dependencies = [
   "httpx==0.28.1",
   "prometheus-client==0.21.1",
   "greenlet==3.1.1",
+  "argon2-cffi==25.1.0",
+  "bcrypt==5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +51,7 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra"
 markers = [
   "integration: requires external services such as Redis",
+  "db: requires a real PostgreSQL instance (run in the database CI job)",
 ]
 
 [tool.coverage.run]
@@ -69,6 +72,7 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S603", "ARG001", "ARG002", "PT011", "PT018"]
+"app/cli/**" = ["T201"]
 "alembic/**" = ["E501", "I001", "UP"]
 
 [tool.ruff.lint.isort]

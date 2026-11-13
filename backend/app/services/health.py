@@ -11,17 +11,38 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable
+from functools import lru_cache
+from pathlib import Path
 from typing import Final
 
 import httpx
 import redis.asyncio as aioredis
+from alembic.config import Config as AlembicConfig
+from alembic.script import ScriptDirectory
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_engine
 from app.schemas.health import DependencyCheck, ReadinessResponse
 
 logger = logging.getLogger(__name__)
+
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+
+@lru_cache(maxsize=1)
+def expected_migration_heads() -> frozenset[str]:
+    """Read the head revision(s) from the checked-in migration scripts.
+
+    The API image ships ``alembic`` and ``alembic.ini``, so readiness compares
+    the live ``alembic_version`` row with the code that is actually deployed.
+    """
+    config = AlembicConfig(str(_BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
+    script = ScriptDirectory.from_config(config)
+    return frozenset(script.get_heads())
+
 
 DEPENDENCIES: Final[tuple[str, ...]] = (
     "postgres",
@@ -62,12 +83,63 @@ class HealthService:
         )
 
     async def check_postgres(self) -> DependencyCheck:
-        async def probe() -> None:
-            engine = get_engine()
-            async with engine.connect() as connection:
-                await connection.execute(text("SELECT 1"))
+        """Check connectivity and that the schema revision matches the code."""
 
-        return await self._measure("postgres", probe())
+        async def probe() -> str:
+            # Use NullPool to avoid connection pool state issues across event loops
+            from sqlalchemy.ext.asyncio import create_async_engine
+            from sqlalchemy.pool import NullPool
+            
+            # Create temporary engine for this check
+            engine = create_async_engine(
+                self.settings.database.url,
+                poolclass=NullPool,
+                echo=False,
+            )
+            try:
+                async with engine.connect() as connection:
+                    await connection.execute(text("SELECT 1"))
+                    try:
+                        result = await connection.execute(
+                            text("SELECT version_num FROM alembic_version")
+                        )
+                    except DBAPIError as exc:
+                        if (getattr(exc.orig, "sqlstate", None) or "") == "42P01":
+                            return "migration_state_missing"
+                        raise
+                    current = {str(row[0]) for row in result}
+                if current != expected_migration_heads():
+                    return "migration_mismatch"
+                return "migrations_current"
+            finally:
+                await engine.dispose()
+
+        started = time.perf_counter()
+        try:
+            detail = await asyncio.wait_for(
+                probe(), timeout=self.settings.app.dependency_timeout_seconds
+            )
+        except TimeoutError:
+            return DependencyCheck(
+                status="error",
+                latency_ms=round((time.perf_counter() - started) * 1000, 2),
+                detail="timeout",
+            )
+        except Exception as exc:
+            logger.warning(
+                "dependency_check_failed",
+                extra={"dependency": "postgres", "error_type": type(exc).__name__},
+            )
+            return DependencyCheck(
+                status="error",
+                latency_ms=round((time.perf_counter() - started) * 1000, 2),
+                detail="connection_error",
+            )
+        return DependencyCheck(
+            status="ok" if detail == "migrations_current" else "error",
+            latency_ms=round((time.perf_counter() - started) * 1000, 2),
+            detail=detail,
+        )
 
     async def check_redis(self) -> DependencyCheck:
         async def probe() -> None:

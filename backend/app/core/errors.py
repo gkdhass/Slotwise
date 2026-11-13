@@ -37,6 +37,16 @@ class ErrorCode(str, Enum):
     MODULE_B_DISABLED = "MODULE_B_DISABLED"
     SELF_APPROVAL_FORBIDDEN = "SELF_APPROVAL_FORBIDDEN"
     RESPONSE_NOT_SIMULATED = "RESPONSE_NOT_SIMULATED"
+    INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION"
+    AUTH_INVALID_CREDENTIALS = "AUTH_INVALID_CREDENTIALS"
+    AUTH_ACCOUNT_LOCKED = "AUTH_ACCOUNT_LOCKED"
+    AUTH_RATE_LIMITED = "AUTH_RATE_LIMITED"
+    AUTH_TOKEN_EXPIRED = "AUTH_TOKEN_EXPIRED"  # nosec B105 - error code, not a secret
+    AUTH_TOKEN_INVALID = "AUTH_TOKEN_INVALID"  # nosec B105 - error code, not a secret
+    AUTH_REFRESH_REUSE_DETECTED = "AUTH_REFRESH_REUSE_DETECTED"
+    AUTH_REFRESH_REJECTED_REVOKED_FAMILY = "AUTH_REFRESH_REJECTED_REVOKED_FAMILY"
+    PASSWORD_POLICY_VIOLATION = "PASSWORD_POLICY_VIOLATION"  # nosec B105 - error code
+    LAST_ADMIN_PROTECTED = "LAST_ADMIN_PROTECTED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
@@ -118,6 +128,81 @@ class ResponseNotSimulatedError(DomainError):
     code = ErrorCode.RESPONSE_NOT_SIMULATED
     status_code = 403
     default_message = "Only simulated response actions are permitted in this deployment."
+
+
+class InvalidStateTransitionError(DomainError):
+    code = ErrorCode.INVALID_STATE_TRANSITION
+    status_code = 409
+    default_message = "The requested state transition is not allowed."
+
+
+class AuthInvalidCredentialsError(DomainError):
+    """Deliberately indistinguishable between unknown email and bad password."""
+
+    code = ErrorCode.AUTH_INVALID_CREDENTIALS
+    status_code = 401
+    default_message = "The email or password is incorrect."
+
+
+class AuthAccountLockedError(DomainError):
+    code = ErrorCode.AUTH_ACCOUNT_LOCKED
+    status_code = 403
+    default_message = "The account is temporarily locked after repeated failed sign-ins."
+
+
+class AuthRateLimitedError(DomainError):
+    code = ErrorCode.AUTH_RATE_LIMITED
+    status_code = 429
+    default_message = "Too many authentication attempts."
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        retry_after: int,
+        details: Any = None,
+    ) -> None:
+        super().__init__(
+            message,
+            details=details,
+            headers={"Retry-After": str(max(1, int(retry_after)))},
+        )
+
+
+class AuthTokenExpiredError(DomainError):
+    code = ErrorCode.AUTH_TOKEN_EXPIRED
+    status_code = 401
+    default_message = "The authentication token has expired."
+
+
+class AuthTokenInvalidError(DomainError):
+    code = ErrorCode.AUTH_TOKEN_INVALID
+    status_code = 401
+    default_message = "The authentication token is invalid."
+
+
+class AuthRefreshReuseDetectedError(DomainError):
+    code = ErrorCode.AUTH_REFRESH_REUSE_DETECTED
+    status_code = 401
+    default_message = "A previously used refresh token was presented; the session has been revoked."
+
+
+class AuthRefreshRejectedRevokedFamilyError(DomainError):
+    code = ErrorCode.AUTH_REFRESH_REJECTED_REVOKED_FAMILY
+    status_code = 401
+    default_message = "This refresh token belongs to a revoked session family."
+
+
+class PasswordPolicyViolationError(DomainError):
+    code = ErrorCode.PASSWORD_POLICY_VIOLATION
+    status_code = 400
+    default_message = "The password does not meet the password policy."
+
+
+class LastAdminProtectedError(DomainError):
+    code = ErrorCode.LAST_ADMIN_PROTECTED
+    status_code = 409
+    default_message = "The last active administrator cannot be removed or demoted."
 
 
 _HTTP_CODE_MAP: dict[int, ErrorCode] = {

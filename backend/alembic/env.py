@@ -19,8 +19,14 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
-# Never hard-code credentials in alembic.ini; the URL comes from the environment.
-config.set_main_option("sqlalchemy.url", settings.database.url.replace("%", "%%"))
+# Never hard-code credentials in alembic.ini; the migration role's URL comes
+# from the environment and falls back to the application URL for single-role
+# local clusters.
+config.set_main_option(
+    "sqlalchemy.url", settings.database.effective_migration_url.replace("%", "%%")
+)
+# Consumed by the Phase 2 migration when granting least-privilege table access.
+config.set_main_option("app_db_role", settings.database.app_role)
 
 target_metadata = Base.metadata
 

@@ -1,7 +1,7 @@
 """Async SQLAlchemy engine and session lifecycle.
 
-Phase 1 intentionally defines no tables; Alembic and the declarative base are
-wired now so Phase 2 can add models without changing application plumbing.
+The engine is created once per process with UTC, an application name and a
+server-side statement timeout, so runaway queries cannot exhaust the pool.
 """
 
 from __future__ import annotations
@@ -26,14 +26,25 @@ def init_engine(settings: Settings | None = None) -> AsyncEngine:
     global _engine, _session_factory
     if _engine is None:
         resolved = settings or get_settings()
+        database = resolved.database
+        server_settings: dict[str, str] = {
+            "application_name": database.application_name,
+            "timezone": "UTC",
+        }
+        if database.statement_timeout_ms > 0:
+            server_settings["statement_timeout"] = str(database.statement_timeout_ms)
         _engine = create_async_engine(
-            resolved.database.url,
-            pool_size=resolved.database.pool_size,
-            max_overflow=resolved.database.max_overflow,
-            pool_timeout=resolved.database.pool_timeout_seconds,
-            pool_recycle=resolved.database.pool_recycle_seconds,
+            database.url,
+            pool_size=database.pool_size,
+            max_overflow=database.max_overflow,
+            pool_timeout=database.pool_timeout_seconds,
+            pool_recycle=database.pool_recycle_seconds,
             pool_pre_ping=True,
-            echo=resolved.database.echo,
+            echo=database.echo,
+            connect_args={
+                "timeout": database.connect_timeout_seconds,
+                "server_settings": server_settings,
+            },
         )
         _session_factory = async_sessionmaker(
             bind=_engine,

@@ -12,7 +12,11 @@ x-backend-env: &backend-env
   APP_DOCS_ENABLED: ${APP_DOCS_ENABLED:-true}
   APP_ALLOWED_HOSTS: ${APP_ALLOWED_HOSTS:-localhost,127.0.0.1,api,nginx}
   APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-https://localhost,http://localhost:5173}
-  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-slotwise}:${POSTGRES_PASSWORD:-slotwise-dev-password}@postgres:5432/${POSTGRES_DB:-slotwise}
+  DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-slotwise_app}:${APP_DB_PASSWORD:-slotwise-app-dev-password}@postgres:5432/${POSTGRES_DB:-slotwise}
+  DATABASE_APP_ROLE: ${APP_DB_USER:-slotwise_app}
+  DATABASE_MIGRATION_ROLE: ${MIGRATION_DB_USER:-slotwise_migrator}
+  DATABASE_APPLICATION_NAME: slotwise-api
+  DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-15000}
   REDIS_URL: redis://redis:6379/0
   REDIS_QUEUE_NAMES: ${REDIS_QUEUE_NAMES:-celery}
   OPENSEARCH_URL: http://opensearch:9200
@@ -28,6 +32,9 @@ x-backend-env: &backend-env
   SECURITY_SECRET_KEY: ${SECURITY_SECRET_KEY:-dev-only-insecure-secret-key-change-me}
   MODULE_B_ENABLED: ${MODULE_B_ENABLED:-false}
   ALLOW_SELF_APPROVAL: ${ALLOW_SELF_APPROVAL:-false}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@slotwise.local}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Slotwise-Dev-Admin-2026!}
+  SEED_DEMO: ${SEED_DEMO:-false}
 
 services:
   certs-init:
@@ -50,9 +57,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-slotwise-dev-password}
       POSTGRES_DB: ${POSTGRES_DB:-slotwise}
       POSTGRES_INITDB_ARGS: "--data-checksums"
+      APP_DB_USER: ${APP_DB_USER:-slotwise_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-slotwise-app-dev-password}
+      MIGRATION_DB_USER: ${MIGRATION_DB_USER:-slotwise_migrator}
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD:-slotwise-migrator-dev-password}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-create-mlflow.sql:ro
+      - ./infra/docker/postgres/20-create-app-roles.sh:/docker-entrypoint-initdb.d/20-create-app-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -199,6 +211,26 @@ services:
     networks:
       - slotwise
 
+  migrate:
+    # One-shot DDL job. The runtime API/worker images never receive migration
+    # credentials or DDL rights; they wait for this service to succeed.
+    build:
+      context: ./backend
+      target: runtime
+    image: slotwise/backend:0.1.0
+    container_name: slotwise-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *backend-env
+      DATABASE_MIGRATION_URL: postgresql+asyncpg://${MIGRATION_DB_USER:-slotwise_migrator}:${MIGRATION_DB_PASSWORD:-slotwise-migrator-dev-password}@postgres:5432/${POSTGRES_DB:-slotwise}
+      DATABASE_APPLICATION_NAME: slotwise-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - slotwise
+
   api:
     build:
       context: ./backend
@@ -210,6 +242,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       opensearch:
@@ -252,7 +286,10 @@ services:
       ]
     environment:
       <<: *backend-env
+      DATABASE_APPLICATION_NAME: slotwise-worker
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:

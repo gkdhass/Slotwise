@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
+
+T = TypeVar("T")
+
+
+class PageResponse(BaseModel, Generic[T]):
+    items: list[T]
+    next_cursor: str | None = Field(
+        default=None, description="Opaque cursor for the next page; null at the end."
+    )
 
 
 class ErrorResponse(BaseModel):
