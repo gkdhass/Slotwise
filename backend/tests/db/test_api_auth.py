@@ -213,23 +213,33 @@ async def test_replayed_refresh_token_revokes_the_whole_family(
         rows = (await session.execute(select(RefreshToken))).scalars().all()
         assert rows
         assert all(row.revoked_at is not None for row in rows)
-        
+
         # Exactly ONE reuse detection (replay of first token)
         reuse_audit = (
-            await session.execute(
-                select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REUSE_DETECTED")
+            (
+                await session.execute(
+                    select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REUSE_DETECTED")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(reuse_audit) == 1
-        
+
         # Exactly ONE revoked family rejection (use of second after family revocation)
         revoked_family_audit = (
-            await session.execute(
-                select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REJECTED_REVOKED_FAMILY")
+            (
+                await session.execute(
+                    select(AuditLog).where(
+                        AuditLog.action == "AUTH_REFRESH_REJECTED_REVOKED_FAMILY"
+                    )
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(revoked_family_audit) == 1
-        
+
         # Token values are redacted but metadata like token_id is allowed
         for entry in reuse_audit + revoked_family_audit:
             after_json = json.dumps(entry.after or {})

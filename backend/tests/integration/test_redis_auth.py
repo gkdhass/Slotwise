@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 
 import pytest
 from redis.asyncio import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from app.core.config import get_settings
 from app.core.rate_limit import check_sliding_window
@@ -47,12 +49,16 @@ async def test_rate_limit_sliding_window_with_retry_after(real_redis: RedisClien
 
     # First 3 requests succeed
     for i in range(max_requests):
-        result = await check_sliding_window(real_redis, key=key, limit=max_requests, window_seconds=window)
+        result = await check_sliding_window(
+            real_redis, key=key, limit=max_requests, window_seconds=window
+        )
         assert result.allowed, f"Request {i+1} should succeed"
         assert result.retry_after == 0
 
     # 4th request is rate limited and returns retry-after
-    result = await check_sliding_window(real_redis, key=key, limit=max_requests, window_seconds=window)
+    result = await check_sliding_window(
+        real_redis, key=key, limit=max_requests, window_seconds=window
+    )
     assert not result.allowed
     assert 0 < result.retry_after <= window
 
@@ -60,7 +66,9 @@ async def test_rate_limit_sliding_window_with_retry_after(real_redis: RedisClien
     await asyncio.sleep(result.retry_after + 0.1)
 
     # Now the request succeeds
-    result = await check_sliding_window(real_redis, key=key, limit=max_requests, window_seconds=window)
+    result = await check_sliding_window(
+        real_redis, key=key, limit=max_requests, window_seconds=window
+    )
     assert result.allowed
 
 
@@ -88,7 +96,9 @@ async def test_ws_ticket_ip_binding(real_redis: RedisClient) -> None:
     issuing_ip = "192.0.2.100"
     different_ip = "192.0.2.200"
 
-    ticket = await issue_ws_ticket(real_redis, user_id=user_id, ip_address=issuing_ip, ttl_seconds=30)
+    ticket = await issue_ws_ticket(
+        real_redis, user_id=user_id, ip_address=issuing_ip, ttl_seconds=30
+    )
 
     # Consumption from a different IP fails
     consumed = await consume_ws_ticket(real_redis, ticket, ip_address=different_ip)
@@ -123,16 +133,22 @@ async def test_sensor_key_rate_limit_per_source(real_redis: RedisClient) -> None
 
     # Exhaust sensor A's limit
     for _ in range(max_requests):
-        result = await check_sliding_window(real_redis, key=sensor_a_key, limit=max_requests, window_seconds=window)
+        result = await check_sliding_window(
+            real_redis, key=sensor_a_key, limit=max_requests, window_seconds=window
+        )
         assert result.allowed
 
     # Sensor A is now rate limited
-    result = await check_sliding_window(real_redis, key=sensor_a_key, limit=max_requests, window_seconds=window)
+    result = await check_sliding_window(
+        real_redis, key=sensor_a_key, limit=max_requests, window_seconds=window
+    )
     assert not result.allowed
     assert result.retry_after > 0
 
     # Sensor B still has capacity
-    result = await check_sliding_window(real_redis, key=sensor_b_key, limit=max_requests, window_seconds=window)
+    result = await check_sliding_window(
+        real_redis, key=sensor_b_key, limit=max_requests, window_seconds=window
+    )
     assert result.allowed
 
 
@@ -144,11 +160,15 @@ async def test_login_rate_limit_retry_after_header_value(real_redis: RedisClient
 
     # Exhaust the limit
     for _ in range(max_attempts):
-        result = await check_sliding_window(real_redis, key=key, limit=max_attempts, window_seconds=window)
+        result = await check_sliding_window(
+            real_redis, key=key, limit=max_attempts, window_seconds=window
+        )
         assert result.allowed
 
     # Next attempt gets a retry-after value
-    result = await check_sliding_window(real_redis, key=key, limit=max_attempts, window_seconds=window)
+    result = await check_sliding_window(
+        real_redis, key=key, limit=max_attempts, window_seconds=window
+    )
     assert not result.allowed
     assert 0 < result.retry_after <= window
 
@@ -165,7 +185,7 @@ async def test_redis_connection_failure_fails_closed() -> None:
 
     try:
         # Should raise an exception, not silently pass
-        with pytest.raises(Exception):  # ConnectionError or TimeoutError
+        with pytest.raises((RedisConnectionError, RedisTimeoutError)):
             await check_sliding_window(bad_client, key="test", limit=10, window_seconds=60)
     finally:
         await bad_client.aclose()  # type: ignore[attr-defined]
@@ -183,10 +203,12 @@ async def test_redis_down_returns_503_for_ticket_operations() -> None:
     user_id = uuid.uuid4()
 
     try:
-        with pytest.raises(Exception):
-            await issue_ws_ticket(bad_client, user_id=user_id, ip_address="192.0.2.1", ttl_seconds=30)
+        with pytest.raises((RedisConnectionError, RedisTimeoutError)):
+            await issue_ws_ticket(
+                bad_client, user_id=user_id, ip_address="192.0.2.1", ttl_seconds=30
+            )
 
-        with pytest.raises(Exception):
+        with pytest.raises((RedisConnectionError, RedisTimeoutError)):
             await consume_ws_ticket(bad_client, "fake-ticket", ip_address="192.0.2.1")
     finally:
         await bad_client.aclose()  # type: ignore[attr-defined]

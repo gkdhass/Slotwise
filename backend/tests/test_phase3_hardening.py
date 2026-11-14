@@ -40,7 +40,7 @@ def test_jwt_never_contains_permissions() -> None:
     # Add padding if needed
     payload_b64 += "=" * (-len(payload_b64) % 4)
     payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-    
+
     assert "permissions" not in payload
     assert "role" in payload
     assert payload["role"] == "ADMIN"
@@ -48,10 +48,11 @@ def test_jwt_never_contains_permissions() -> None:
 
 def test_jwt_rejects_alg_none() -> None:
     """alg=none bypass attempt is rejected."""
-    from app.core.config import Settings
-    from app.core.security import TokenValidationError
     import base64
     import json
+
+    from app.core.config import Settings
+    from app.core.security import TokenValidationError
 
     settings = Settings()
     header = {"alg": "none", "typ": "JWT", "kid": settings.security.jwt_key_id}
@@ -64,12 +65,16 @@ def test_jwt_rejects_alg_none() -> None:
         "iss": settings.security.jwt_issuer,
         "aud": settings.security.jwt_audience,
     }
-    
+
     def b64(data: dict[str, Any]) -> str:
-        return base64.urlsafe_b64encode(
-            json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
-        ).decode().rstrip("=")
-    
+        return (
+            base64.urlsafe_b64encode(
+                json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
+            )
+            .decode()
+            .rstrip("=")
+        )
+
     fake_token = f"{b64(header)}.{b64(payload)}."
     with pytest.raises(TokenValidationError, match="algorithm_not_allowed"):
         decode_access_token(fake_token, settings=settings)
@@ -91,12 +96,16 @@ def test_jwt_rejects_unknown_kid() -> None:
 
     header = json.loads(base64.urlsafe_b64decode(parts[0] + "=" * (-len(parts[0]) % 4)))
     header["kid"] = "unknown-kid-999"
-    
+
     def b64(data: dict[str, Any]) -> str:
-        return base64.urlsafe_b64encode(
-            json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
-        ).decode().rstrip("=")
-    
+        return (
+            base64.urlsafe_b64encode(
+                json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
+            )
+            .decode()
+            .rstrip("=")
+        )
+
     tampered = f"{b64(header)}.{parts[1]}.{parts[2]}"
     with pytest.raises(TokenValidationError, match="unknown_kid"):
         decode_access_token(tampered, settings=settings)
@@ -104,13 +113,14 @@ def test_jwt_rejects_unknown_kid() -> None:
 
 def test_jwt_rejects_wrong_issuer() -> None:
     """Tokens from wrong issuer are rejected."""
-    from app.core.config import Settings
-    from app.core.security import TokenValidationError
     import base64
     import hashlib
     import hmac
     import json
     from datetime import UTC, datetime, timedelta
+
+    from app.core.config import Settings
+    from app.core.security import TokenValidationError
 
     settings = Settings()
     now = datetime.now(UTC)
@@ -124,11 +134,11 @@ def test_jwt_rejects_wrong_issuer() -> None:
         "iss": "evil-issuer",  # Wrong!
         "aud": settings.security.jwt_audience,
     }
-    
+
     def b64(data: dict[str, Any]) -> str:
         raw = json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-    
+
     signing_input = f"{b64(header)}.{b64(payload)}"
     sig = hmac.new(
         settings.security.active_jwt_secret.encode(),
@@ -136,20 +146,21 @@ def test_jwt_rejects_wrong_issuer() -> None:
         hashlib.sha256,
     ).digest()
     token = f"{signing_input}.{base64.urlsafe_b64encode(sig).decode().rstrip('=')}"
-    
+
     with pytest.raises(TokenValidationError, match="bad_issuer"):
         decode_access_token(token, settings=settings)
 
 
 def test_jwt_rejects_wrong_audience() -> None:
     """Tokens for wrong audience are rejected."""
-    from app.core.config import Settings
-    from app.core.security import TokenValidationError
     import base64
     import hashlib
     import hmac
     import json
     from datetime import UTC, datetime, timedelta
+
+    from app.core.config import Settings
+    from app.core.security import TokenValidationError
 
     settings = Settings()
     now = datetime.now(UTC)
@@ -163,11 +174,11 @@ def test_jwt_rejects_wrong_audience() -> None:
         "iss": settings.security.jwt_issuer,
         "aud": "wrong-audience",  # Wrong!
     }
-    
+
     def b64(data: dict[str, Any]) -> str:
         raw = json.dumps(data, separators=(",", ":"), sort_keys=True).encode()
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-    
+
     signing_input = f"{b64(header)}.{b64(payload)}"
     sig = hmac.new(
         settings.security.active_jwt_secret.encode(),
@@ -175,6 +186,6 @@ def test_jwt_rejects_wrong_audience() -> None:
         hashlib.sha256,
     ).digest()
     token = f"{signing_input}.{base64.urlsafe_b64encode(sig).decode().rstrip('=')}"
-    
+
     with pytest.raises(TokenValidationError, match="bad_audience"):
         decode_access_token(token, settings=settings)

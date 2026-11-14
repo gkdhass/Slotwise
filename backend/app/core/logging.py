@@ -14,7 +14,7 @@ _request_id_ctx: ContextVar[str] = ContextVar("request_id", default="-")
 
 _SENSITIVE_KEYS = re.compile(
     r"(?i)(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|"
-    r"private[_-]?key|authorization|cookie|session[_-]?id)"
+    r"x[_-]?sensor[_-]?key|private[_-]?key|authorization|cookie|session[_-]?id)"
 )
 _REDACTED = "[REDACTED]"
 
@@ -27,7 +27,8 @@ _TEXT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         # Handles both ``key=value`` logs and quoted JSON-style ``"key": "value"``.
         re.compile(
             r"(?i)([\"']?(?:password|passwd|pwd|secret|token|api[_-]?key|"
-            r"access[_-]?key|access[_-]?token|private[_-]?key|authorization|"
+            r"access[_-]?key|access[_-]?token|private[_-]?key|x[_-]?sensor[_-]?key|"
+            r"authorization|"
             r"client[_-]?secret|cookie|session[_-]?id)[\"']?\s*[=:]\s*)"
             r"(\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
         ),

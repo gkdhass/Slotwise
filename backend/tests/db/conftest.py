@@ -22,7 +22,8 @@ APP_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get(
     "postgresql+asyncpg://slotwise_app:slotwise_app@127.0.0.1:5432/slotwise_test",
 )
 MIGRATION_URL = (
-    os.environ.get("TEST_MIGRATION_URL") or os.environ.get("DATABASE_MIGRATION_URL")
+    os.environ.get("TEST_MIGRATION_URL")
+    or os.environ.get("DATABASE_MIGRATION_URL")
     or "postgresql+asyncpg://slotwise_migrator:slotwise_migrator@127.0.0.1:5432/slotwise_test"
 )
 os.environ["DATABASE_URL"] = APP_URL
@@ -266,9 +267,7 @@ class RaceAdmins:
         from app.models.identity import User
 
         async with self._factory() as session:
-            await session.execute(
-                update(User).where(User.id == member.id).values(is_active=active)
-            )
+            await session.execute(update(User).where(User.id == member.id).values(is_active=active))
             await session.commit()
 
     async def active_admin_ids(self) -> list[Any]:
@@ -291,7 +290,8 @@ class RaceAdmins:
 
         async with self._factory() as session:
             result = await session.execute(
-                select(User.id, Role.name).join(Role, User.role_id == Role.id)
+                select(User.id, Role.name)
+                .join(Role, User.role_id == Role.id)
                 .where(User.id.in_([member.id for member in self.members]))
             )
             return {row[0]: row[1] for row in result.all()}
@@ -319,7 +319,9 @@ def race_session_factory(app_engine: AsyncEngine) -> Any:
 
 
 @pytest.fixture
-async def race_api_client(app: Any, settings: Any, race_session_factory: Any, fake_redis: Any) -> Any:
+async def race_api_client(
+    app: Any, settings: Any, race_session_factory: Any, fake_redis: Any
+) -> Any:
     import httpx
     from httpx import ASGITransport
 
@@ -389,16 +391,20 @@ async def race_admins(
             )
         await session.commit()
         leftover = (
-            await session.execute(
-                select(User.id)
-                .join(Role, User.role_id == Role.id)
-                .where(
-                    Role.name == "ADMIN",
-                    User.is_active.is_(True),
-                    User.id.notin_(created_ids),
+            (
+                await session.execute(
+                    select(User.id)
+                    .join(Role, User.role_id == Role.id)
+                    .where(
+                        Role.name == "ADMIN",
+                        User.is_active.is_(True),
+                        User.id.notin_(created_ids),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     # The invariant is global, so another committed active admin would silently
     # neuter the race: refuse to produce a false pass.

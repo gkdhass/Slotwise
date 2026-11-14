@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config as AlembicConfig
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from app.models import Base
 
@@ -101,3 +101,55 @@ async def test_alembic_autogenerate_detects_no_drift(migrated_database) -> None:
     output = f"{result.stdout}\n{result.stderr}"
     assert result.returncode == 0, output
     assert "No new upgrade operations detected" in output
+
+
+# Constraint and index names follow ``<kind>_<table>_<detail>``. SQLAlchemy's
+# naming convention already prefixes them, so a migration that spells the
+# prefix into the explicit name (``ck_users_ck_users_email``) produces a
+# doubled name that still "works" but is impossible to read or target.
+NAME_PREFIXES = ("ck_", "uq_", "fk_", "ix_")
+
+_CONSTRAINT_NAME_SQL = """
+SELECT c.relname AS table_name, con.conname AS name
+FROM pg_constraint con
+JOIN pg_class c ON c.oid = con.conrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+UNION ALL
+SELECT tablename AS table_name, indexname AS name
+FROM pg_indexes
+WHERE schemaname = 'public'
+"""
+
+
+def _has_doubled_prefix(table: str, name: str) -> bool:
+    """Return True when a name repeats its kind prefix or its table name."""
+    if name.count(f"{table}_") > 1:
+        return True
+    prefix = next((candidate for candidate in NAME_PREFIXES if name.startswith(candidate)), "")
+    remainder = name[len(prefix) :]
+    table_head = f"{table}_"
+    if not remainder.startswith(table_head):
+        return False
+    detail = remainder[len(table_head) :]
+    return any(detail.startswith(candidate) for candidate in NAME_PREFIXES)
+
+
+def test_doubled_name_detector_recognises_regressions() -> None:
+    """The detector must catch the bug it guards against, without false positives."""
+    assert _has_doubled_prefix("users", "ck_users_ck_users_email")
+    assert _has_doubled_prefix("users", "ix_users_ix_users_email")
+    assert _has_doubled_prefix("users", "ck_users_ck_email")
+    assert not _has_doubled_prefix("users", "ck_users_email")
+    assert not _has_doubled_prefix("sensors", "ck_sensors_credential_prefix_format")
+    assert not _has_doubled_prefix("incident_alerts", "fk_incident_alerts_alert_id_alerts")
+
+
+async def test_constraint_and_index_names_are_not_doubled(
+    migrated_database, migration_engine
+) -> None:
+    """No pg_constraint/pg_indexes name may repeat its prefix or table name."""
+    async with migration_engine.connect() as connection:
+        rows = (await connection.execute(text(_CONSTRAINT_NAME_SQL))).all()
+    offenders = sorted({(table, name) for table, name in rows if _has_doubled_prefix(table, name)})
+    assert offenders == [], f"doubled constraint/index names: {offenders}"

@@ -23,7 +23,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.core.config import Settings, get_settings
-from app.core.database import get_engine
 from app.schemas.health import DependencyCheck, ReadinessResponse
 
 logger = logging.getLogger(__name__)
@@ -89,7 +88,7 @@ class HealthService:
             # Use NullPool to avoid connection pool state issues across event loops
             from sqlalchemy.ext.asyncio import create_async_engine
             from sqlalchemy.pool import NullPool
-            
+
             # Create temporary engine for this check
             engine = create_async_engine(
                 self.settings.database.url,

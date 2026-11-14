@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy import text
 
 from app.core.config import Settings, reset_settings_cache
-from app.core.database import dispose_engine, init_engine
 from app.services import health as health_module
 from app.services.health import HealthService, expected_migration_heads
 

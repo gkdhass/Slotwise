@@ -44,23 +44,36 @@ def test_redact_text_handles_json_urls_and_bearer() -> None:
     text = (
         '{"password": "p@ssw0rd", "access_token": "tok-123"} '
         "postgresql://user:db-secret@db:5432/slotwise "
-        "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature"
+        "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature "
+        "x-sensor-key: sensor-secret-value cookie=refresh-cookie-value "
+        "refresh_token=refresh-secret-value"
     )
     redacted = redact_text(text)
     assert "p@ssw0rd" not in redacted
     assert "tok-123" not in redacted
     assert "db-secret" not in redacted
     assert "eyJhbGciOiJIUzI1NiJ9" not in redacted
+    assert "sensor-secret-value" not in redacted
+    assert "refresh-cookie-value" not in redacted
+    assert "refresh-secret-value" not in redacted
     assert "[REDACTED]" in redacted
 
 
 def test_redact_mapping_is_recursive() -> None:
     payload = {
-        "request": {"headers": {"Authorization": "Bearer abc.def.ghi"}},
+        "request": {
+            "headers": {
+                "Authorization": "Bearer abc.def.ghi",
+                "X-Sensor-Key": "sensor-header-secret",
+                "Cookie": "slotwise_refresh=refresh-header-secret",
+            }
+        },
         "credentials": [{"password": "x"}, {"safe": "visible"}],
     }
     redacted = redact_mapping(payload)
     assert redacted["request"]["headers"]["Authorization"] == "[REDACTED]"
+    assert redacted["request"]["headers"]["X-Sensor-Key"] == "[REDACTED]"
+    assert redacted["request"]["headers"]["Cookie"] == "[REDACTED]"
     assert redacted["credentials"][0]["password"] == "[REDACTED]"
     assert redacted["credentials"][1]["safe"] == "visible"
 

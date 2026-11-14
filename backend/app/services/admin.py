@@ -313,9 +313,13 @@ class UserAdminService:
         if role_name is not None and role_name != current_role:
             new_role = await self._role(role_name)
 
-        removing_active_admin = current_role == "ADMIN" and user.is_active and (
-            (new_role is not None and new_role.name != "ADMIN")
-            or (is_active is not None and not is_active)
+        removing_active_admin = (
+            current_role == "ADMIN"
+            and user.is_active
+            and (
+                (new_role is not None and new_role.name != "ADMIN")
+                or (is_active is not None and not is_active)
+            )
         )
         if removing_active_admin and len(locked_admin_ids) <= 1:
             raise LastAdminProtectedError()

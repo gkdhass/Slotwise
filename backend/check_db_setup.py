@@ -1,6 +1,12 @@
 """Check and create required PostgreSQL roles and databases."""
+
 import asyncio
+import logging
+
 import asyncpg
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 async def check_setup():
@@ -9,27 +15,28 @@ async def check_setup():
 
     # Check/create roles
     roles = await conn.fetch(
-        "SELECT rolname FROM pg_roles WHERE rolname IN ('slotwise_migrator', 'slotwise_app', 'slotwise_test')"
+        "SELECT rolname FROM pg_roles WHERE rolname IN "
+        "('slotwise_migrator', 'slotwise_app', 'slotwise_test')"
     )
     existing_roles = {r["rolname"] for r in roles}
 
     if "slotwise_migrator" not in existing_roles:
         await conn.execute("CREATE ROLE slotwise_migrator WITH LOGIN PASSWORD 'slotwise_migrator'")
-        print("Created role: slotwise_migrator")
+        logger.info("Created role: slotwise_migrator")
     else:
-        print("Role exists: slotwise_migrator")
+        logger.info("Role exists: slotwise_migrator")
 
     if "slotwise_app" not in existing_roles:
         await conn.execute("CREATE ROLE slotwise_app WITH LOGIN PASSWORD 'slotwise_app'")
-        print("Created role: slotwise_app")
+        logger.info("Created role: slotwise_app")
     else:
-        print("Role exists: slotwise_app")
+        logger.info("Role exists: slotwise_app")
 
     if "slotwise_test" not in existing_roles:
         await conn.execute("CREATE ROLE slotwise_test WITH LOGIN PASSWORD 'slotwise_test'")
-        print("Created role: slotwise_test")
+        logger.info("Created role: slotwise_test")
     else:
-        print("Role exists: slotwise_test")
+        logger.info("Role exists: slotwise_test")
 
     # Check/create databases
     dbs = await conn.fetch(
@@ -39,28 +46,30 @@ async def check_setup():
 
     if "slotwise" not in existing_dbs:
         await conn.execute("CREATE DATABASE slotwise OWNER slotwise_migrator")
-        print("Created database: slotwise")
+        logger.info("Created database: slotwise")
     else:
-        print("Database exists: slotwise")
+        logger.info("Database exists: slotwise")
 
     if "slotwise_test" not in existing_dbs:
         await conn.execute("CREATE DATABASE slotwise_test OWNER slotwise_migrator")
-        print("Created database: slotwise_test")
+        logger.info("Created database: slotwise_test")
     else:
-        print("Database exists: slotwise_test")
+        logger.info("Database exists: slotwise_test")
 
     await conn.close()
-    
+
     # Grant permissions on slotwise_test
     test_conn = await asyncpg.connect("postgresql://postgres:postgres@localhost:5432/slotwise_test")
     await test_conn.execute("GRANT ALL PRIVILEGES ON DATABASE slotwise_test TO slotwise_test")
     await test_conn.execute("GRANT ALL PRIVILEGES ON SCHEMA public TO slotwise_test")
     await test_conn.execute("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO slotwise_test")
-    await test_conn.execute("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO slotwise_test")
+    await test_conn.execute(
+        "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO slotwise_test"
+    )
     await test_conn.close()
-    
-    print("Granted permissions to slotwise_test role")
-    print("Setup complete!")
+
+    logger.info("Granted permissions to slotwise_test role")
+    logger.info("Setup complete!")
 
 
 asyncio.run(check_setup())

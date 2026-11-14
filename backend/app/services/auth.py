@@ -210,12 +210,12 @@ class AuthService:
             raise AuthTokenInvalidError("The refresh token is invalid.")
 
         now = datetime.now(UTC)
-        
-        # Distinguish between replay (used_at set, revoked_at may be None or later) 
+
+        # Distinguish between replay (used_at set, revoked_at may be None or later)
         # vs already-revoked-family (revoked_at set before or without use)
         if row.used_at is not None:
             # Token was already used → replay detection → revoke family and log reuse
-            await self._handle_reuse(row, ip_address=ip_address, is_replay=True)
+            await self._handle_reuse(row, ip_address=ip_address)
             raise AuthRefreshReuseDetectedError()
         elif row.revoked_at is not None:
             # Token is part of an already-revoked family → log different action
@@ -259,7 +259,7 @@ class AuthService:
             expires_in=self.settings.security.access_token_expire_minutes * 60,
         )
 
-    async def _handle_reuse(self, row: RefreshToken, *, ip_address: str | None, is_replay: bool) -> None:
+    async def _handle_reuse(self, row: RefreshToken, *, ip_address: str | None) -> None:
         """Handle replay of an already-used token (actual reuse detection)."""
         await self.tokens.revoke_family(row.family_id)
         await self.audit.record(

@@ -1,11 +1,12 @@
 """Phase 3 debt clearance tests.
 
 Tests validating all Phase 3 requirements including roles, audit behavior,
-principal×route matrix, cookie security, policy safety, and sensor lifecycle.
+principalxroute matrix, cookie security, policy safety, and sensor lifecycle.
 """
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -42,37 +43,40 @@ async def test_three_roles_exist_after_seeding(session_factory, seed_settings: A
         roles = list((await session.execute(select(Role))).scalars().all())
         role_names = {role.name for role in roles}
 
-        assert role_names == {RoleName.ADMIN, RoleName.ANALYST, RoleName.VIEWER}, (
-            f"Expected all three roles, got {role_names}"
-        )
+        assert role_names == {
+            RoleName.ADMIN,
+            RoleName.ANALYST,
+            RoleName.VIEWER,
+        }, f"Expected all three roles, got {role_names}"
         assert len(roles) == 3
 
 
 async def test_refresh_reuse_vs_revoked_family_audit_distinction(
     api_client: Any, make_user: Any, api_session_factory: Any
 ) -> None:
-    """Replay writes AUTH_REFRESH_REUSE_DETECTED; subsequent use of revoked family writes AUTH_REFRESH_REJECTED_REVOKED_FAMILY."""
+    """Replay writes AUTH_REFRESH_REUSE_DETECTED; a later use of the revoked
+    family writes AUTH_REFRESH_REJECTED_REVOKED_FAMILY."""
     from app.models.audit import AuditLog
     from app.models.identity import RefreshToken
     from tests.db.conftest import CSRF_HEADERS
 
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    COOKIE_NAME = "__Secure-slotwise_refresh"
+    password = "Correct-Horse-Battery-2026!"
+    cookie_name = "__Secure-slotwise_refresh"
 
     def _cookie_header(raw_token: str) -> dict[str, str]:
-        return {"Cookie": f"{COOKIE_NAME}={raw_token}"}
+        return {"Cookie": f"{cookie_name}={raw_token}"}
 
-    await make_user(email="analyst@example.com", password=PASSWORD)
+    await make_user(email="analyst@example.com", password=password)
     login = await api_client.post(
-        "/api/v1/auth/login", json={"email": "analyst@example.com", "password": PASSWORD}
+        "/api/v1/auth/login", json={"email": "analyst@example.com", "password": password}
     )
-    first = login.cookies.get(COOKIE_NAME)
+    first = login.cookies.get(cookie_name)
     assert first
 
     # Rotate to get second token
     rotated = await api_client.post("/api/v1/auth/refresh", headers=CSRF_HEADERS)
     assert rotated.status_code == 200
-    second = rotated.cookies.get(COOKIE_NAME)
+    second = rotated.cookies.get(cookie_name)
     assert second
 
     # Replay first token → AUTH_REFRESH_REUSE_DETECTED, family revoked
@@ -83,14 +87,16 @@ async def test_refresh_reuse_vs_revoked_family_audit_distinction(
     assert replay.status_code == 401
     assert replay.json()["code"] == "AUTH_REFRESH_REUSE_DETECTED"
 
-    # Subsequent use of second token (now revoked as part of family) → AUTH_REFRESH_REJECTED_REVOKED_FAMILY
+    # Subsequent use of second token (now revoked as part of family)
+    # → AUTH_REFRESH_REJECTED_REVOKED_FAMILY
     family_use = await api_client.post(
         "/api/v1/auth/refresh",
         headers={**CSRF_HEADERS, **_cookie_header(second)},
     )
     assert family_use.status_code == 401
-    # This should be a DIFFERENT error code from reuse detection
-    assert family_use.json()["code"] in ("AUTH_REFRESH_REUSE_DETECTED", "AUTH_REFRESH_REJECTED_REVOKED_FAMILY")
+    # The newest token belongs to a revoked family: it must be rejected with the
+    # dedicated code, never mistaken for a fresh reuse detection.
+    assert family_use.json()["code"] == "AUTH_REFRESH_REJECTED_REVOKED_FAMILY"
 
     async with api_session_factory() as session:
         # All tokens in family are revoked
@@ -100,34 +106,53 @@ async def test_refresh_reuse_vs_revoked_family_audit_distinction(
 
         # Audit log assertions
         reuse_audit = (
-            await session.execute(
-                select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REUSE_DETECTED")
+            (
+                await session.execute(
+                    select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REUSE_DETECTED")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         # Exactly ONE reuse detection event (the replay of first token)
         assert len(reuse_audit) == 1, f"Expected 1 reuse event, got {len(reuse_audit)}"
 
         revoked_family_audit = (
-            await session.execute(
-                select(AuditLog).where(AuditLog.action == "AUTH_REFRESH_REJECTED_REVOKED_FAMILY")
+            (
+                await session.execute(
+                    select(AuditLog).where(
+                        AuditLog.action == "AUTH_REFRESH_REJECTED_REVOKED_FAMILY"
+                    )
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         # ONE revoked family rejection (the use of second token after family revocation)
         # Note: If the code hasn't been fixed yet, this will be a second reuse event instead
-        assert len(revoked_family_audit) == 1, (
-            f"Expected 1 revoked family rejection, got {len(revoked_family_audit)}"
-        )
+        assert (
+            len(revoked_family_audit) == 1
+        ), f"Expected 1 revoked family rejection, got {len(revoked_family_audit)}"
+
+        # No raw token material may reach the audit trail.
+        for row in (*reuse_audit, *revoked_family_audit):
+            snapshot = json.dumps({"before": row.before, "after": row.after})
+            assert first not in snapshot
+            assert second not in snapshot
 
 
 async def test_role_claim_freshness_bidirectional(
     api_client: Any, make_user: Any, login_headers: Any, api_session_factory: Any
 ) -> None:
-    """Role changes in DB immediately affect permissions on same JWT (promote VIEWER→ANALYST→ADMIN, demote ADMIN→VIEWER)."""
+    """Role changes in DB immediately affect permissions on the same JWT.
+
+    Promote VIEWER → ANALYST → ADMIN, then demote ADMIN → VIEWER.
+    """
     from app.models.identity import Role
 
-    PASSWORD = "Correct-Horse-Battery-2026!"
+    password = "Correct-Horse-Battery-2026!"
 
     # Pre-create all roles that will be needed
     async with api_session_factory() as session:
@@ -138,12 +163,12 @@ async def test_role_claim_freshness_bidirectional(
         await session.commit()
 
     # Create user as VIEWER
-    viewer_id = await make_user(email="user@example.com", password=PASSWORD, role="VIEWER")
-    admin_id = await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
+    viewer_id = await make_user(email="user@example.com", password=password, role="VIEWER")
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
 
     # Login as the user (gets JWT with VIEWER role claim)
-    user_headers = await login_headers(api_client, "user@example.com", PASSWORD)
-    admin_headers = await login_headers(api_client, "admin@example.com", PASSWORD)
+    user_headers = await login_headers(api_client, "user@example.com", password)
+    admin_headers = await login_headers(api_client, "admin@example.com", password)
 
     # Initial permissions for VIEWER (no users:manage)
     me = await api_client.get("/api/v1/auth/me", headers=user_headers)
@@ -188,13 +213,15 @@ async def test_role_claim_freshness_bidirectional(
 
 
 async def test_cookie_attributes_on_login(api_client: Any, make_user: Any) -> None:
-    """Login emits Set-Cookie with HttpOnly, Secure, SameSite=Strict, correct path, and __Secure- prefix."""
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    await make_user(email="analyst@example.com", password=PASSWORD)
+    """Login emits Set-Cookie with HttpOnly, Secure, SameSite=Strict, the correct
+    path, and the __Secure- prefix.
+    """
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="analyst@example.com", password=password)
 
     response = await api_client.post(
         "/api/v1/auth/login",
-        json={"email": "analyst@example.com", "password": PASSWORD},
+        json={"email": "analyst@example.com", "password": password},
     )
     assert response.status_code == 200
 
@@ -212,12 +239,12 @@ async def test_cookie_attributes_on_login(api_client: Any, make_user: Any) -> No
 
 async def test_refresh_requires_csrf_header(api_client: Any, make_user: Any) -> None:
     """POST /auth/refresh returns 403 for missing X-Requested-With."""
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    await make_user(email="analyst@example.com", password=PASSWORD)
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="analyst@example.com", password=password)
 
     login = await api_client.post(
         "/api/v1/auth/login",
-        json={"email": "analyst@example.com", "password": PASSWORD},
+        json={"email": "analyst@example.com", "password": password},
     )
     assert login.status_code == 200
 
@@ -228,12 +255,12 @@ async def test_refresh_requires_csrf_header(api_client: Any, make_user: Any) -> 
 
 async def test_refresh_rejects_bad_origin(api_client: Any, make_user: Any) -> None:
     """POST /auth/refresh returns 403 for disallowed Origin."""
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    await make_user(email="analyst@example.com", password=PASSWORD)
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="analyst@example.com", password=password)
 
     login = await api_client.post(
         "/api/v1/auth/login",
-        json={"email": "analyst@example.com", "password": PASSWORD},
+        json={"email": "analyst@example.com", "password": password},
     )
     assert login.status_code == 200
 
@@ -286,9 +313,9 @@ async def test_sensor_key_appears_once_hash_stored(
     """Sensor key appears only in creation response, DB stores only hash."""
     from app.models.assets import Sensor
 
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    admin_id = await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
 
     # Create sensor
     response = await api_client.post(
@@ -323,9 +350,9 @@ async def test_sensor_key_rotation_invalidates_old(
     api_client: Any, make_user: Any, login_headers: Any
 ) -> None:
     """Rotating sensor key invalidates old key on next request."""
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
 
     # Create sensor
     create_response = await api_client.post(
@@ -341,23 +368,27 @@ async def test_sensor_key_rotation_invalidates_old(
     sensor_id = create_response.json()["sensor"]["id"]
 
     # Old key works (use sensor heartbeat endpoint)
-    old_response = await api_client.post("/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": old_key})
+    old_response = await api_client.post(
+        "/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": old_key}
+    )
     assert old_response.status_code == 200
 
     # Rotate key
-    rotate_response = await api_client.post(
-        f"/api/v1/sensors/{sensor_id}/rotate", headers=headers
-    )
+    rotate_response = await api_client.post(f"/api/v1/sensors/{sensor_id}/rotate", headers=headers)
     assert rotate_response.status_code == 200
     new_key = rotate_response.json()["api_key"]
     assert new_key != old_key
 
     # Old key immediately rejected
-    old_rejected = await api_client.post("/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": old_key})
+    old_rejected = await api_client.post(
+        "/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": old_key}
+    )
     assert old_rejected.status_code == 401
 
     # New key works
-    new_works = await api_client.post("/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": new_key})
+    new_works = await api_client.post(
+        "/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": new_key}
+    )
     assert new_works.status_code == 200
 
 
@@ -365,9 +396,9 @@ async def test_sensor_revocation_permanent(
     api_client: Any, make_user: Any, login_headers: Any
 ) -> None:
     """Revoked sensor key never works again."""
-    PASSWORD = "Correct-Horse-Battery-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
+    password = "Correct-Horse-Battery-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
 
     # Create sensor
     create_response = await api_client.post(
@@ -383,9 +414,7 @@ async def test_sensor_revocation_permanent(
     sensor_id = create_response.json()["sensor"]["id"]
 
     # Revoke sensor
-    revoke_response = await api_client.post(
-        f"/api/v1/sensors/{sensor_id}/revoke", headers=headers
-    )
+    revoke_response = await api_client.post(f"/api/v1/sensors/{sensor_id}/revoke", headers=headers)
     assert revoke_response.status_code == 200
 
     # Key rejected
@@ -393,78 +422,324 @@ async def test_sensor_revocation_permanent(
     assert rejected.status_code == 401
 
     # Still rejected after time passes
-    rejected_again = await api_client.post("/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": key})
+    rejected_again = await api_client.post(
+        "/api/v1/sensors/heartbeat", headers={"X-Sensor-Key": key}
+    )
     assert rejected_again.status_code == 401
 
 
 # ============================================================================
-# Item 4: Principal × Route Access Matrix
+# Item 4: Principal x Route Access Matrix
 # ============================================================================
 
 # Expected access for each route: (method, path) -> {principal_type: expected_status}
-# Status codes: 200-299 = allowed, 401 = unauthorized, 403 = forbidden, 404/422 = allowed but invalid input
+# Status codes: 200-299 = allowed, 401 = unauthorized, 403 = forbidden, and
+# 404/422 = allowed but invalid input.
 ROUTE_ACCESS_MATRIX: dict[tuple[str, str], dict[str, int]] = {
     # Public routes - accessible to all
-    ("GET", "/healthz"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 200},
-    ("GET", "/readyz"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 200},
-    ("GET", "/metrics"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 200},
-    ("GET", "/api/v1/healthz"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 200},
-    ("GET", "/api/v1/readyz"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 200},
-    
+    ("GET", "/healthz"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 200,
+    },
+    ("GET", "/readyz"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 200,
+    },
+    ("GET", "/metrics"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 200,
+    },
+    ("GET", "/api/v1/healthz"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 200,
+    },
+    ("GET", "/api/v1/readyz"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 200,
+    },
     # Auth routes
-    ("POST", "/api/v1/auth/login"): {"anonymous": 200, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 422},  # 422 for sensor (validation)
-    ("POST", "/api/v1/auth/refresh"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 403, "sensor": 401},  # 403 without CSRF/cookie
-    ("POST", "/api/v1/auth/logout"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 403, "sensor": 401},  # 403 without CSRF
-    ("POST", "/api/v1/auth/logout-all"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    ("GET", "/api/v1/auth/me"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    ("GET", "/api/v1/me"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/auth/change-password"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/auth/ws-ticket"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    
+    ("POST", "/api/v1/auth/login"): {
+        "anonymous": 200,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 422,
+    },  # 422 for sensor (validation)
+    ("POST", "/api/v1/auth/refresh"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 403,
+        "sensor": 401,
+    },  # 403 without CSRF/cookie
+    ("POST", "/api/v1/auth/logout"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 403,
+        "sensor": 401,
+    },  # 403 without CSRF
+    ("POST", "/api/v1/auth/logout-all"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("GET", "/api/v1/auth/me"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("GET", "/api/v1/me"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/auth/change-password"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/auth/ws-ticket"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
     # Sensor-only routes
-    ("POST", "/api/v1/sensors/heartbeat"): {"anonymous": 401, "viewer": 401, "analyst": 401, "admin": 401, "sensor": 200},
-    
+    ("POST", "/api/v1/sensors/heartbeat"): {
+        "anonymous": 401,
+        "viewer": 401,
+        "analyst": 401,
+        "admin": 401,
+        "sensor": 200,
+    },
     # User management - ADMIN only
-    ("GET", "/api/v1/users"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/users"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 422, "sensor": 401},  # 422 without valid body
-    ("GET", "/api/v1/users/{user_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("PATCH", "/api/v1/users/{user_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/users/{user_id}/deactivate"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/users/{user_id}/reactivate"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/users/{user_id}/reset-password"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/users/{user_id}/unlock"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    
+    ("GET", "/api/v1/users"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/users"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 422,
+        "sensor": 401,
+    },  # 422 without valid body
+    ("GET", "/api/v1/users/{user_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("PATCH", "/api/v1/users/{user_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/users/{user_id}/deactivate"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/users/{user_id}/reactivate"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/users/{user_id}/reset-password"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/users/{user_id}/unlock"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Sensor management - ADMIN only
-    ("GET", "/api/v1/sensors"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/sensors"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 422, "sensor": 401},
-    ("POST", "/api/v1/sensors/{sensor_id}/rotate"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/sensors/{sensor_id}/revoke"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    
+    ("GET", "/api/v1/sensors"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/sensors"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 422,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/sensors/{sensor_id}/rotate"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/sensors/{sensor_id}/revoke"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Asset management - All authenticated users can view, ADMIN can manage
-    ("GET", "/api/v1/assets"): {"anonymous": 401, "viewer": 200, "analyst": 200, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/assets"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 422, "sensor": 401},
-    ("GET", "/api/v1/assets/{asset_id}"): {"anonymous": 401, "viewer": 404, "analyst": 404, "admin": 404, "sensor": 401},
-    ("PATCH", "/api/v1/assets/{asset_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("DELETE", "/api/v1/assets/{asset_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    
+    ("GET", "/api/v1/assets"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/assets"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 422,
+        "sensor": 401,
+    },
+    ("GET", "/api/v1/assets/{asset_id}"): {
+        "anonymous": 401,
+        "viewer": 404,
+        "analyst": 404,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("PATCH", "/api/v1/assets/{asset_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("DELETE", "/api/v1/assets/{asset_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Response policies - ADMIN only
-    ("GET", "/api/v1/response-policies"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/response-policies"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 422, "sensor": 401},
-    ("GET", "/api/v1/response-policies/{name}/versions"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/response-policies/{policy_id}/enable"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("POST", "/api/v1/response-policies/{policy_id}/disable"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    
+    ("GET", "/api/v1/response-policies"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/response-policies"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 422,
+        "sensor": 401,
+    },
+    ("GET", "/api/v1/response-policies/{name}/versions"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/response-policies/{policy_id}/enable"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/response-policies/{policy_id}/disable"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Allowlist - ADMIN only
-    ("GET", "/api/v1/allowlist"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
-    ("POST", "/api/v1/allowlist"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 422, "sensor": 401},
-    ("PATCH", "/api/v1/allowlist/{entry_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    ("DELETE", "/api/v1/allowlist/{entry_id}"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 404, "sensor": 401},
-    
+    ("GET", "/api/v1/allowlist"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
+    ("POST", "/api/v1/allowlist"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 422,
+        "sensor": 401,
+    },
+    ("PATCH", "/api/v1/allowlist/{entry_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
+    ("DELETE", "/api/v1/allowlist/{entry_id}"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Audit logs - ADMIN only
-    ("GET", "/api/v1/audit-logs"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
-    
+    ("GET", "/api/v1/audit-logs"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
     # Roles - ADMIN only
-    ("GET", "/api/v1/roles"): {"anonymous": 401, "viewer": 403, "analyst": 403, "admin": 200, "sensor": 401},
+    ("GET", "/api/v1/roles"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 403,
+        "admin": 200,
+        "sensor": 401,
+    },
 }
 
 
@@ -474,19 +749,19 @@ async def test_principal_route_access_matrix_complete_and_enforced(
     """Every live route must be in the access matrix, and access must be enforced correctly."""
     from app.api.deps import iter_api_routes
     from app.main import create_app
-    
-    PASSWORD = "Test-Password-2026!"
-    
+
+    password = "Test-Password-2026!"
+
     # Create users for each role
-    viewer_id = await make_user(email="viewer@example.com", password=PASSWORD, role="VIEWER")
-    analyst_id = await make_user(email="analyst@example.com", password=PASSWORD, role="ANALYST")
-    admin_id = await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    
+    await make_user(email="viewer@example.com", password=password, role="VIEWER")
+    await make_user(email="analyst@example.com", password=password, role="ANALYST")
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+
     # Get auth headers for each user
-    viewer_headers = await login_headers(api_client, "viewer@example.com", PASSWORD)
-    analyst_headers = await login_headers(api_client, "analyst@example.com", PASSWORD)
-    admin_headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+    viewer_headers = await login_headers(api_client, "viewer@example.com", password)
+    analyst_headers = await login_headers(api_client, "analyst@example.com", password)
+    admin_headers = await login_headers(api_client, "admin@example.com", password)
+
     # Create a sensor for sensor auth testing
     sensor_response = await api_client.post(
         "/api/v1/sensors",
@@ -496,7 +771,7 @@ async def test_principal_route_access_matrix_complete_and_enforced(
     assert sensor_response.status_code == 201
     sensor_key = sensor_response.json()["api_key"]
     sensor_headers = {"X-Sensor-Key": sensor_key}
-    
+
     # Get all live routes from the app
     app = create_app()
     live_routes = set()
@@ -504,19 +779,19 @@ async def test_principal_route_access_matrix_complete_and_enforced(
         for method in route.methods:
             if method not in ("HEAD", "OPTIONS"):
                 live_routes.add((method, route.path))
-    
+
     # Check that all live routes are in the matrix
     matrix_routes = set(ROUTE_ACCESS_MATRIX.keys())
     missing_from_matrix = live_routes - matrix_routes
     assert not missing_from_matrix, f"Routes missing from access matrix: {missing_from_matrix}"
-    
+
     # Check that matrix doesn't have stale routes
     stale_routes = matrix_routes - live_routes
     assert not stale_routes, f"Stale routes in access matrix (not in app): {stale_routes}"
-    
+
     # Now test access enforcement for each route and principal
     failures = []
-    
+
     for (method, path), expected_access in ROUTE_ACCESS_MATRIX.items():
         # Replace path parameters with dummy values
         test_path = path.replace("{user_id}", "00000000-0000-0000-0000-000000000001")
@@ -525,7 +800,7 @@ async def test_principal_route_access_matrix_complete_and_enforced(
         test_path = test_path.replace("{policy_id}", "00000000-0000-0000-0000-000000000004")
         test_path = test_path.replace("{entry_id}", "00000000-0000-0000-0000-000000000005")
         test_path = test_path.replace("{name}", "test-policy")
-        
+
         # Test each principal type
         test_cases = [
             ("anonymous", {}),
@@ -534,12 +809,12 @@ async def test_principal_route_access_matrix_complete_and_enforced(
             ("admin", admin_headers),
             ("sensor", sensor_headers),
         ]
-        
+
         for principal_type, headers in test_cases:
             expected_status = expected_access.get(principal_type)
             if expected_status is None:
                 continue
-                
+
             # Make the request
             try:
                 if method == "GET":
@@ -552,9 +827,9 @@ async def test_principal_route_access_matrix_complete_and_enforced(
                     response = await api_client.delete(test_path, headers=headers)
                 else:
                     continue
-                
+
                 actual_status = response.status_code
-                
+
                 # For allowed cases, accept any 2xx/4xx that's not 401/403
                 if expected_status in (200, 201, 204):
                     if actual_status in (401, 403):
@@ -571,56 +846,57 @@ async def test_principal_route_access_matrix_complete_and_enforced(
                                 f"{method} {path} as {principal_type}: "
                                 f"expected {expected_status}, got {actual_status}"
                             )
-                    elif expected_status in (404, 422):
-                        # These are "allowed" outcomes
-                        if actual_status in (401, 403):
-                            failures.append(
-                                f"{method} {path} as {principal_type}: "
-                                f"expected allowed (404/422), got {actual_status}"
-                            )
-                            
+                    elif expected_status in (404, 422) and actual_status in (401, 403):
+                        # 404/422 are "allowed" outcomes; an auth failure is not.
+                        failures.append(
+                            f"{method} {path} as {principal_type}: "
+                            f"expected allowed (404/422), got {actual_status}"
+                        )
+
             except Exception as e:
                 failures.append(f"{method} {path} as {principal_type}: exception {e}")
-    
-    assert not failures, f"Access matrix violations:\n" + "\n".join(failures[:20])
+
+    assert not failures, "Access matrix violations:\n" + "\n".join(failures[:20])
 
 
 # ============================================================================
 # Item 6: Environment Hygiene
 # ============================================================================
 
+
 def test_non_dev_refuses_placeholder_jwt_secret() -> None:
     """Non-dev environments must refuse placeholder/weak JWT secrets."""
     import os
+
     from app.core.config import Settings, reset_settings_cache
-    
+
     # Save original env
     original_env = os.environ.get("APP_ENV")
     original_jwt = os.environ.get("SECURITY_JWT_SECRET_KEY")
     original_pwd = os.environ.get("SEED_ADMIN_PASSWORD")
     original_cors = os.environ.get("APP_CORS_ORIGINS")
-    
+
     try:
         # Need valid password and CORS for non-dev
         os.environ["SEED_ADMIN_PASSWORD"] = "Strong-Valid-Password-2026!"
         os.environ["APP_CORS_ORIGINS"] = "https://example.com"
-        
+
         # Test with placeholder secret in production
         os.environ["SECURITY_JWT_SECRET_KEY"] = "change-me-in-production"
         os.environ["APP_ENV"] = "prod"
         reset_settings_cache()
-        
+
         with pytest.raises(ValueError, match="JWT secret.*production|placeholder"):
             Settings()
-            
+
         # Test with short secret in staging
         os.environ["SECURITY_JWT_SECRET_KEY"] = "short"
         os.environ["APP_ENV"] = "staging"
         reset_settings_cache()
-        
+
         with pytest.raises(ValueError, match="JWT.*32 characters"):
             Settings()
-            
+
     finally:
         # Restore
         if original_env:
@@ -645,30 +921,31 @@ def test_non_dev_refuses_placeholder_jwt_secret() -> None:
 def test_non_dev_refuses_weak_admin_password() -> None:
     """Non-dev environments must refuse weak or default admin passwords."""
     import os
+
     from app.core.config import Settings, reset_settings_cache
-    
+
     original_env = os.environ.get("APP_ENV")
     original_pwd = os.environ.get("SEED_ADMIN_PASSWORD")
     original_cors = os.environ.get("APP_CORS_ORIGINS")
-    
+
     try:
         os.environ["APP_ENV"] = "prod"
         os.environ["APP_CORS_ORIGINS"] = "https://example.com"
-        
+
         # Test with missing password
         os.environ.pop("SEED_ADMIN_PASSWORD", None)
         reset_settings_cache()
-        
+
         with pytest.raises(ValueError, match="SEED_ADMIN_PASSWORD.*required"):
             Settings()
-        
+
         # Test with weak password
         os.environ["SEED_ADMIN_PASSWORD"] = "weak"
         reset_settings_cache()
-        
+
         with pytest.raises(ValueError, match="password.*complexity|min length"):
             Settings()
-            
+
     finally:
         if original_env:
             os.environ["APP_ENV"] = original_env
@@ -688,21 +965,22 @@ def test_non_dev_refuses_weak_admin_password() -> None:
 def test_non_dev_requires_origin_allowlist() -> None:
     """Non-dev environments must have an explicit CORS origin allow-list."""
     import os
+
     from app.core.config import Settings, reset_settings_cache
-    
+
     original_env = os.environ.get("APP_ENV")
     original_origins = os.environ.get("APP_CORS_ORIGINS")
     original_pwd = os.environ.get("SEED_ADMIN_PASSWORD")
-    
+
     try:
         os.environ["APP_ENV"] = "prod"
         os.environ["SEED_ADMIN_PASSWORD"] = "Strong-Valid-Password-2026!"
         os.environ.pop("APP_CORS_ORIGINS", None)
         reset_settings_cache()
-        
+
         with pytest.raises(ValueError, match="CORS.*origin.*required|explicitly set"):
             Settings()
-            
+
     finally:
         if original_env:
             os.environ["APP_ENV"] = original_env
@@ -722,15 +1000,16 @@ def test_non_dev_requires_origin_allowlist() -> None:
 @pytest.mark.parametrize("environment", ["prod", "staging"])
 async def test_demo_seeding_refused_in_non_dev(environment: str, session_factory: Any) -> None:
     """Demo seeding must be refused in all non-dev environments."""
-    from app.services.seed import SeedError, SeedService
     from pydantic import SecretStr
-    
+
+    from app.services.seed import SeedError, SeedService
+
     reset_settings_cache()
     settings = Settings()
     settings.app.env = environment
     settings.seed.demo = True
     settings.seed.admin_password = SecretStr("Strong-Admin-Password-2026!")
-    
+
     service = SeedService(settings, session_factory=session_factory)
     with pytest.raises(SeedError, match="Demo data is refused"):
         await service.run()
@@ -741,49 +1020,41 @@ async def test_default_admin_must_change_password_on_first_login(
 ) -> None:
     """Seeded admin must have must_change_password=True."""
     from app.services.seed import SeedService
-    
+
     result = await SeedService(seed_settings, session_factory=session_factory).run()
     assert result.admin_created is True
-    
+
     async with session_factory() as session:
         admin = (
-            await session.execute(
-                select(User).where(User.email == seed_settings.seed.admin_email)
-            )
+            await session.execute(select(User).where(User.email == seed_settings.seed.admin_email))
         ).scalar_one()
         assert admin.must_change_password is True
 
 
-async def test_second_seed_run_changes_nothing(
-    seed_settings: Any, session_factory: Any
-) -> None:
+async def test_second_seed_run_changes_nothing(seed_settings: Any, session_factory: Any) -> None:
     """Running seed twice must not modify existing data."""
     from app.services.seed import SeedService
-    
+
     service = SeedService(seed_settings, session_factory=session_factory)
-    
+
     # First run
     result1 = await service.run()
     assert result1.admin_created is True
-    
+
     async with session_factory() as session:
         admin1 = (
-            await session.execute(
-                select(User).where(User.email == seed_settings.seed.admin_email)
-            )
+            await session.execute(select(User).where(User.email == seed_settings.seed.admin_email))
         ).scalar_one()
         created_at1 = admin1.created_at
         password_hash1 = admin1.password_hash
-    
+
     # Second run
     result2 = await service.run()
     assert result2.admin_created is False  # Already exists
-    
+
     async with session_factory() as session:
         admin2 = (
-            await session.execute(
-                select(User).where(User.email == seed_settings.seed.admin_email)
-            )
+            await session.execute(select(User).where(User.email == seed_settings.seed.admin_email))
         ).scalar_one()
         # Timestamps and passwords unchanged
         assert admin2.created_at == created_at1
@@ -797,20 +1068,21 @@ async def test_second_seed_run_changes_nothing(
 # HIGH_IMPACT_ACTIONS from app/models/enums.py - must match HIGH_IMPACT_ACTION_TYPES
 HIGH_IMPACT_ACTIONS = [
     "BLOCK_IP",
-    "ISOLATE_HOST", 
+    "ISOLATE_HOST",
     "DISABLE_ACCOUNT",
     "QUARANTINE_FILE",
 ]
+
 
 @pytest.mark.parametrize("action_type", HIGH_IMPACT_ACTIONS)
 async def test_high_impact_policy_cannot_disable_approval(
     action_type: str, api_client: Any, make_user: Any, login_headers: Any
 ) -> None:
     """High-impact policies must not allow approval to be disabled."""
-    PASSWORD = "Test-Password-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+    password = "Test-Password-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     # Try to create policy with requires_approval=false for high-impact action
     response = await api_client.post(
         "/api/v1/response-policies",
@@ -822,9 +1094,12 @@ async def test_high_impact_policy_cannot_disable_approval(
             "conditions": {},
         },
     )
-    
+
     # Should fail validation
-    assert response.status_code in (400, 422), f"High-impact {action_type} accepted without approval"
+    assert response.status_code in (
+        400,
+        422,
+    ), f"High-impact {action_type} accepted without approval"
 
 
 async def test_policy_new_version_leaves_old_immutable(
@@ -832,11 +1107,11 @@ async def test_policy_new_version_leaves_old_immutable(
 ) -> None:
     """Creating a new policy version must leave the old version immutable."""
     from app.models.responses import ResponsePolicy
-    
-    PASSWORD = "Test-Password-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+
+    password = "Test-Password-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     # Create initial policy
     v1_response = await api_client.post(
         "/api/v1/response-policies",
@@ -848,21 +1123,23 @@ async def test_policy_new_version_leaves_old_immutable(
             "conditions": {},
         },
     )
-    if v1_response.status_code != 201:
-        print(f"V1 creation failed: {v1_response.status_code} - {v1_response.json()}")
-    assert v1_response.status_code == 201
-    
+    assert (
+        v1_response.status_code == 201
+    ), f"V1 creation failed: {v1_response.status_code} - {v1_response.json()}"
+
     # Get version 1 ID and attributes
     async with api_session_factory() as session:
         v1_policy = (
             await session.execute(
-                select(ResponsePolicy).where(ResponsePolicy.name == "test-policy", ResponsePolicy.version == 1)
+                select(ResponsePolicy).where(
+                    ResponsePolicy.name == "test-policy", ResponsePolicy.version == 1
+                )
             )
         ).scalar_one()
         v1_id = v1_policy.id
         v1_action = v1_policy.action_type
         v1_approval = v1_policy.requires_approval
-    
+
     # Create version 2
     v2_response = await api_client.post(
         "/api/v1/response-policies",
@@ -870,12 +1147,12 @@ async def test_policy_new_version_leaves_old_immutable(
         json={
             "name": "test-policy",
             "action_type": "ISOLATE_HOST",  # Different action
-            "requires_approval": True,       # Different approval
+            "requires_approval": True,  # Different approval
             "conditions": {},
         },
     )
     assert v2_response.status_code == 201
-    
+
     # Version 1 must be unchanged
     async with api_session_factory() as session:
         v1_check = await session.get(ResponsePolicy, v1_id)
@@ -883,25 +1160,26 @@ async def test_policy_new_version_leaves_old_immutable(
         assert v1_check.action_type == v1_action
         assert v1_check.requires_approval == v1_approval
         assert v1_check.version == 1
-        
+
         # V2 should supersede V1
         v2_policy = (
             await session.execute(
-                select(ResponsePolicy).where(ResponsePolicy.name == "test-policy", ResponsePolicy.version == 2)
+                select(ResponsePolicy).where(
+                    ResponsePolicy.name == "test-policy", ResponsePolicy.version == 2
+                )
             )
         ).scalar_one()
         assert v2_policy.supersedes_id == v1_id
 
 
-async def test_direct_sql_update_of_superseded_policy_blocked(
-    db_session: Any
-) -> None:
+async def test_direct_sql_update_of_superseded_policy_blocked(db_session: Any) -> None:
     """DB trigger must block UPDATE of superseded policy versions."""
+
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
+
     from app.models.responses import ResponsePolicy
-    from datetime import UTC, datetime
-    
+
     # Create version 1
     policy_v1 = ResponsePolicy(
         name="test-policy",
@@ -913,7 +1191,7 @@ async def test_direct_sql_update_of_superseded_policy_blocked(
     db_session.add(policy_v1)
     await db_session.flush()
     v1_id = policy_v1.id
-    
+
     # Create version 2 that supersedes v1
     policy_v2 = ResponsePolicy(
         name="test-policy",
@@ -926,12 +1204,12 @@ async def test_direct_sql_update_of_superseded_policy_blocked(
     db_session.add(policy_v2)
     await db_session.flush()
     await db_session.commit()
-    
+
     # Try to update the superseded v1 via SQL
     with pytest.raises(DBAPIError, match="append-only|immutable|trigger"):
         await db_session.execute(
             text("UPDATE response_policies SET action_type = 'quarantine_file' WHERE id = :id"),
-            {"id": v1_id}
+            {"id": v1_id},
         )
     await db_session.rollback()
 
@@ -942,8 +1220,9 @@ async def test_superseded_policy_cannot_be_updated_by_app_role(
     """Superseded policy versions cannot be UPDATEd by slotwise_app role."""
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
+
     from app.models.responses import ResponsePolicy
-    
+
     # Create two policy versions as slotwise_app
     async with api_session_factory() as session:
         policy_v1 = ResponsePolicy(
@@ -956,7 +1235,7 @@ async def test_superseded_policy_cannot_be_updated_by_app_role(
         session.add(policy_v1)
         await session.flush()
         v1_id = policy_v1.id
-        
+
         policy_v2 = ResponsePolicy(
             name="test-policy",
             version=2,
@@ -967,21 +1246,20 @@ async def test_superseded_policy_cannot_be_updated_by_app_role(
         )
         session.add(policy_v2)
         await session.commit()
-    
+
     # Try to update superseded v1 as slotwise_app
     async with api_session_factory() as session:
         with pytest.raises(DBAPIError) as exc_info:
             await session.execute(
                 text("UPDATE response_policies SET action_type = 'DISABLE_ACCOUNT' WHERE id = :id"),
-                {"id": v1_id}
+                {"id": v1_id},
             )
-            await session.commit()
-        
+
         error_msg = str(exc_info.value).lower()
         # Trigger message says "superseded response policy version is immutable"
-        assert "immutable" in error_msg or "append-only" in error_msg, (
-            f"Expected trigger-blocked error, got: {exc_info.value}"
-        )
+        assert (
+            "immutable" in error_msg or "append-only" in error_msg
+        ), f"Expected trigger-blocked error, got: {exc_info.value}"
 
 
 async def test_superseded_policy_cannot_be_deleted_by_app_role(
@@ -990,8 +1268,9 @@ async def test_superseded_policy_cannot_be_deleted_by_app_role(
     """Superseded policy versions cannot be DELETEd by slotwise_app role."""
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
+
     from app.models.responses import ResponsePolicy
-    
+
     async with api_session_factory() as session:
         policy_v1 = ResponsePolicy(
             name="test-policy-delete",
@@ -1003,7 +1282,7 @@ async def test_superseded_policy_cannot_be_deleted_by_app_role(
         session.add(policy_v1)
         await session.flush()
         v1_id = policy_v1.id
-        
+
         policy_v2 = ResponsePolicy(
             name="test-policy-delete",
             version=2,
@@ -1014,107 +1293,110 @@ async def test_superseded_policy_cannot_be_deleted_by_app_role(
         )
         session.add(policy_v2)
         await session.commit()
-    
+
     # Try to delete superseded v1
     async with api_session_factory() as session:
         with pytest.raises(DBAPIError) as exc_info:
             await session.execute(
-                text("DELETE FROM response_policies WHERE id = :id"),
-                {"id": v1_id}
+                text("DELETE FROM response_policies WHERE id = :id"), {"id": v1_id}
             )
-            await session.commit()
-        
+
         error_msg = str(exc_info.value).lower()
         # Trigger message says "response policy versions are append-only"
-        assert "immutable" in error_msg or "append-only" in error_msg, (
-            f"Expected trigger-blocked error, got: {exc_info.value}"
-        )
+        assert (
+            "immutable" in error_msg or "append-only" in error_msg
+        ), f"Expected trigger-blocked error, got: {exc_info.value}"
 
 
-async def test_superseded_policy_cannot_be_updated_by_migrator_role(
-    migration_engine: Any
-) -> None:
+async def test_superseded_policy_cannot_be_updated_by_migrator_role(migration_engine: Any) -> None:
     """Superseded policy versions cannot be UPDATEd even by slotwise_migrator."""
+    import uuid
+
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
-    import uuid
-    
+
     # Use unique names to avoid conflicts across runs
     test_name = f"migrator-test-{uuid.uuid4().hex[:8]}"
-    
+
     # Create policies as migrator (include enabled column with default)
     async with migration_engine.begin() as conn:
-        v1_id = (await conn.execute(
-            text("""
-                INSERT INTO response_policies (name, version, action_type, requires_approval, conditions, enabled)
+        v1_id = (
+            await conn.execute(
+                text("""
+                INSERT INTO response_policies
+                    (name, version, action_type, requires_approval, conditions, enabled)
                 VALUES (:name, 1, 'BLOCK_IP', true, '{}', true)
                 RETURNING id
             """),
-            {"name": test_name}
-        )).scalar_one()
-        
+                {"name": test_name},
+            )
+        ).scalar_one()
+
         await conn.execute(
             text("""
-                INSERT INTO response_policies (name, version, action_type, requires_approval, conditions, enabled, supersedes_id)
+                INSERT INTO response_policies
+                    (name, version, action_type, requires_approval, conditions, enabled,
+                     supersedes_id)
                 VALUES (:name, 2, 'ISOLATE_HOST', true, '{}', true, :v1_id)
             """),
-            {"name": test_name, "v1_id": v1_id}
+            {"name": test_name, "v1_id": v1_id},
         )
-    
+
     # Try to update superseded v1 as migrator
     with pytest.raises(DBAPIError) as exc_info:
         async with migration_engine.begin() as conn:
             await conn.execute(
                 text("UPDATE response_policies SET action_type = 'DISABLE_ACCOUNT' WHERE id = :id"),
-                {"id": v1_id}
+                {"id": v1_id},
             )
-    
+
     error_msg = str(exc_info.value).lower()
-    assert "immutable" in error_msg or "append-only" in error_msg, (
-        f"Expected trigger-blocked error, got: {exc_info.value}"
-    )
+    assert (
+        "immutable" in error_msg or "append-only" in error_msg
+    ), f"Expected trigger-blocked error, got: {exc_info.value}"
 
 
-async def test_superseded_policy_cannot_be_deleted_by_migrator_role(
-    migration_engine: Any
-) -> None:
+async def test_superseded_policy_cannot_be_deleted_by_migrator_role(migration_engine: Any) -> None:
     """Superseded policy versions cannot be DELETEd even by slotwise_migrator."""
+    import uuid
+
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
-    import uuid
-    
+
     test_name = f"migrator-delete-{uuid.uuid4().hex[:8]}"
-    
+
     async with migration_engine.begin() as conn:
-        v1_id = (await conn.execute(
-            text("""
-                INSERT INTO response_policies (name, version, action_type, requires_approval, conditions, enabled)
+        v1_id = (
+            await conn.execute(
+                text("""
+                INSERT INTO response_policies
+                    (name, version, action_type, requires_approval, conditions, enabled)
                 VALUES (:name, 1, 'BLOCK_IP', true, '{}', true)
                 RETURNING id
             """),
-            {"name": test_name}
-        )).scalar_one()
-        
+                {"name": test_name},
+            )
+        ).scalar_one()
+
         await conn.execute(
             text("""
-                INSERT INTO response_policies (name, version, action_type, requires_approval, conditions, enabled, supersedes_id)
+                INSERT INTO response_policies
+                    (name, version, action_type, requires_approval, conditions, enabled,
+                     supersedes_id)
                 VALUES (:name, 2, 'ISOLATE_HOST', true, '{}', true, :v1_id)
             """),
-            {"name": test_name, "v1_id": v1_id}
+            {"name": test_name, "v1_id": v1_id},
         )
-    
+
     # Try to delete superseded v1
     with pytest.raises(DBAPIError) as exc_info:
         async with migration_engine.begin() as conn:
-            await conn.execute(
-                text("DELETE FROM response_policies WHERE id = :id"),
-                {"id": v1_id}
-            )
-    
+            await conn.execute(text("DELETE FROM response_policies WHERE id = :id"), {"id": v1_id})
+
     error_msg = str(exc_info.value).lower()
-    assert "immutable" in error_msg or "append-only" in error_msg, (
-        f"Expected trigger-blocked error, got: {exc_info.value}"
-    )
+    assert (
+        "immutable" in error_msg or "append-only" in error_msg
+    ), f"Expected trigger-blocked error, got: {exc_info.value}"
 
 
 async def test_current_policy_can_toggle_enabled_via_api(
@@ -1122,12 +1404,13 @@ async def test_current_policy_can_toggle_enabled_via_api(
 ) -> None:
     """Current policy version can have its 'enabled' column toggled via SQL."""
     from sqlalchemy import text
+
     from app.models.responses import ResponsePolicy
-    
-    PASSWORD = "Test-Password-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+
+    password = "Test-Password-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     # Create policy (enabled by default)
     create_resp = await api_client.post(
         "/api/v1/response-policies",
@@ -1141,35 +1424,33 @@ async def test_current_policy_can_toggle_enabled_via_api(
     )
     assert create_resp.status_code == 201
     policy_id = create_resp.json()["id"]
-    
+
     # Verify it's enabled
     async with api_session_factory() as session:
         policy = await session.get(ResponsePolicy, policy_id)
         assert policy.enabled is True
-    
+
     # Disable via SQL (allowed for CURRENT version)
     async with api_session_factory() as session:
         result = await session.execute(
-            text("UPDATE response_policies SET enabled = false WHERE id = :id"),
-            {"id": policy_id}
+            text("UPDATE response_policies SET enabled = false WHERE id = :id"), {"id": policy_id}
         )
         await session.commit()
         assert result.rowcount == 1
-    
+
     # Verify disabled
     async with api_session_factory() as session:
         await session.execute(text("SELECT 1"))  # Fresh connection
         policy = await session.get(ResponsePolicy, policy_id)
         assert policy.enabled is False
-    
+
     # Re-enable
     async with api_session_factory() as session:
         await session.execute(
-            text("UPDATE response_policies SET enabled = true WHERE id = :id"),
-            {"id": policy_id}
+            text("UPDATE response_policies SET enabled = true WHERE id = :id"), {"id": policy_id}
         )
         await session.commit()
-    
+
     async with api_session_factory() as session:
         policy = await session.get(ResponsePolicy, policy_id)
         assert policy.enabled is True
@@ -1181,11 +1462,11 @@ async def test_current_policy_cannot_change_immutable_columns_via_sql(
     """Current policy version cannot change action_type or requires_approval via SQL."""
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
-    
-    PASSWORD = "Test-Password-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+
+    password = "Test-Password-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     create_resp = await api_client.post(
         "/api/v1/response-policies",
         headers=headers,
@@ -1198,34 +1479,34 @@ async def test_current_policy_cannot_change_immutable_columns_via_sql(
     )
     assert create_resp.status_code == 201
     policy_id = create_resp.json()["id"]
-    
+
     # Try to change action_type on CURRENT version (should be blocked by trigger)
     async with api_session_factory() as session:
         with pytest.raises(DBAPIError) as exc_info:
             await session.execute(
                 text("UPDATE response_policies SET action_type = 'ISOLATE_HOST' WHERE id = :id"),
-                {"id": policy_id}
+                {"id": policy_id},
             )
-            await session.commit()
-        
+
         error_msg = str(exc_info.value).lower()
-        assert "immutable" in error_msg or "only enabled" in error_msg, (
-            f"Expected trigger blocking immutable column change, got: {exc_info.value}"
-        )
+        assert (
+            "immutable" in error_msg or "only enabled" in error_msg
+        ), f"Expected trigger blocking immutable column change, got: {exc_info.value}"
 
 
 async def test_new_policy_version_leaves_old_row_byte_identical(
     api_client: Any, make_user: Any, login_headers: Any, api_session_factory: Any
 ) -> None:
     """Creating a new policy version must leave the old row completely unchanged."""
-    from app.models.responses import ResponsePolicy
     import hashlib
     import json
-    
-    PASSWORD = "Test-Password-2026!"
-    await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+
+    from app.models.responses import ResponsePolicy
+
+    password = "Test-Password-2026!"
+    await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     # Create v1
     v1_resp = await api_client.post(
         "/api/v1/response-policies",
@@ -1238,12 +1519,14 @@ async def test_new_policy_version_leaves_old_row_byte_identical(
         },
     )
     assert v1_resp.status_code == 201
-    
+
     # Capture v1 state
     async with api_session_factory() as session:
         v1_policy = (
             await session.execute(
-                select(ResponsePolicy).where(ResponsePolicy.name == "hash-test", ResponsePolicy.version == 1)
+                select(ResponsePolicy).where(
+                    ResponsePolicy.name == "hash-test", ResponsePolicy.version == 1
+                )
             )
         ).scalar_one()
         v1_snapshot = {
@@ -1258,7 +1541,7 @@ async def test_new_policy_version_leaves_old_row_byte_identical(
             "created_at": v1_policy.created_at.isoformat(),
         }
         v1_hash = hashlib.sha256(json.dumps(v1_snapshot, sort_keys=True).encode()).hexdigest()
-    
+
     # Create v2
     v2_resp = await api_client.post(
         "/api/v1/response-policies",
@@ -1271,12 +1554,14 @@ async def test_new_policy_version_leaves_old_row_byte_identical(
         },
     )
     assert v2_resp.status_code == 201
-    
+
     # Re-capture v1 state
     async with api_session_factory() as session:
         v1_policy = (
             await session.execute(
-                select(ResponsePolicy).where(ResponsePolicy.name == "hash-test", ResponsePolicy.version == 1)
+                select(ResponsePolicy).where(
+                    ResponsePolicy.name == "hash-test", ResponsePolicy.version == 1
+                )
             )
         ).scalar_one()
         v1_snapshot_after = {
@@ -1290,8 +1575,10 @@ async def test_new_policy_version_leaves_old_row_byte_identical(
             "supersedes_id": str(v1_policy.supersedes_id) if v1_policy.supersedes_id else None,
             "created_at": v1_policy.created_at.isoformat(),
         }
-        v1_hash_after = hashlib.sha256(json.dumps(v1_snapshot_after, sort_keys=True).encode()).hexdigest()
-    
+        v1_hash_after = hashlib.sha256(
+            json.dumps(v1_snapshot_after, sort_keys=True).encode()
+        ).hexdigest()
+
     assert v1_hash == v1_hash_after, "V1 policy row changed after V2 creation"
 
 
@@ -1299,16 +1586,13 @@ async def test_new_policy_version_leaves_old_row_byte_identical(
 async def test_high_impact_parametrization_is_complete() -> None:
     """Verify the parametrized test covers all HIGH_IMPACT_ACTION_TYPES plus isolate_host."""
     from app.models.enums import HIGH_IMPACT_ACTION_TYPES
-    
+
     # Expected by parametrization
     parametrized = set(HIGH_IMPACT_ACTIONS)
-    
+
     # Actual from enum
     actual = {action.value for action in HIGH_IMPACT_ACTION_TYPES}
-    
-    print(f"Parametrized actions: {sorted(parametrized)}")
-    print(f"HIGH_IMPACT_ACTION_TYPES: {sorted(actual)}")
-    
+
     # All high-impact types must be parametrized (including isolate_host variant)
     assert parametrized == actual, f"Mismatch: parametrized={parametrized}, actual={actual}"
 
@@ -1317,17 +1601,20 @@ async def test_high_impact_parametrization_is_complete() -> None:
 # Item 8: Last-Admin Race
 # ============================================================================
 
+
 async def test_last_admin_sequential_deactivation_blocked(
     api_client: Any, make_user: Any, login_headers: Any, api_session_factory: Any
 ) -> None:
     """Single admin cannot deactivate themselves (baseline test)."""
-    PASSWORD = "Test-Password-2026!"
-    admin_id = await make_user(email="admin@example.com", password=PASSWORD, role="ADMIN")
-    headers = await login_headers(api_client, "admin@example.com", PASSWORD)
-    
+    password = "Test-Password-2026!"
+    admin_id = await make_user(email="admin@example.com", password=password, role="ADMIN")
+    headers = await login_headers(api_client, "admin@example.com", password)
+
     # Try to deactivate the only admin
     response = await api_client.post(f"/api/v1/users/{admin_id}/deactivate", headers=headers)
-    assert response.status_code == 409, f"Expected 409, got {response.status_code}: {response.json()}"
+    assert (
+        response.status_code == 409
+    ), f"Expected 409, got {response.status_code}: {response.json()}"
     assert response.json()["code"] == "LAST_ADMIN_PROTECTED"
 
 
@@ -1350,26 +1637,28 @@ async def test_last_admin_concurrent_mutual_deactivation_prevented(
             race_api_client.post(f"/api/v1/users/{first.id}/deactivate", headers=second.headers),
         )
         statuses = [response.status_code for response in results]
-        print(f"deactivation iteration {iteration + 1}: {statuses}")
 
-        assert all(status < 500 for status in statuses), (
-            f"Iteration {iteration}: server error (statuses: {statuses})"
-        )
-        assert statuses.count(200) == 1, (
-            f"Iteration {iteration}: expected exactly one deactivation, got {statuses}"
-        )
+        assert all(
+            status < 500 for status in statuses
+        ), f"Iteration {iteration}: server error (statuses: {statuses})"
+        assert (
+            statuses.count(200) == 1
+        ), f"Iteration {iteration}: expected exactly one deactivation, got {statuses}"
         loser = next(response for response in results if response.status_code != 200)
-        assert loser.status_code in (400, 401, 403, 409), (
-            f"Iteration {iteration}: unexpected loser status {loser.status_code}"
-        )
+        assert loser.status_code in (
+            400,
+            401,
+            403,
+            409,
+        ), f"Iteration {iteration}: unexpected loser status {loser.status_code}"
         if loser.status_code == 409:
             assert loser.json()["code"] == "LAST_ADMIN_PROTECTED", loser.text
 
         active_admins = await race_admins.active_admin_ids()
         assert active_admins, f"Iteration {iteration}: no active admin remains"
-        assert any(admin in active_admins for admin in (first.id, second.id)), (
-            f"Iteration {iteration}: neither fixture admin is still active"
-        )
+        assert any(
+            admin in active_admins for admin in (first.id, second.id)
+        ), f"Iteration {iteration}: neither fixture admin is still active"
 
 
 async def test_last_admin_concurrent_demotion_prevented(
@@ -1391,26 +1680,27 @@ async def test_last_admin_concurrent_demotion_prevented(
             ),
         )
         statuses = [response.status_code for response in results]
-        print(f"demotion iteration {iteration + 1}: {statuses}")
 
-        assert all(status < 500 for status in statuses), (
-            f"Iteration {iteration}: server error (statuses: {statuses})"
-        )
-        assert statuses.count(200) == 1, (
-            f"Iteration {iteration}: expected exactly one demotion, got {statuses}"
-        )
+        assert all(
+            status < 500 for status in statuses
+        ), f"Iteration {iteration}: server error (statuses: {statuses})"
+        assert (
+            statuses.count(200) == 1
+        ), f"Iteration {iteration}: expected exactly one demotion, got {statuses}"
         loser = next(response for response in results if response.status_code != 200)
-        assert loser.status_code in (400, 403, 409), (
-            f"Iteration {iteration}: unexpected loser status {loser.status_code}"
-        )
+        assert loser.status_code in (
+            400,
+            403,
+            409,
+        ), f"Iteration {iteration}: unexpected loser status {loser.status_code}"
         if loser.status_code == 409:
             assert loser.json()["code"] == "LAST_ADMIN_PROTECTED", loser.text
 
         active_admins = await race_admins.active_admin_ids()
         assert active_admins, f"Iteration {iteration}: no active admin remains"
-        assert first.id in active_admins or second.id in active_admins, (
-            f"Iteration {iteration}: both fixture admins lost ADMIN"
-        )
+        assert (
+            first.id in active_admins or second.id in active_admins
+        ), f"Iteration {iteration}: both fixture admins lost ADMIN"
 
 
 async def test_last_admin_concurrent_mixed_deactivation_and_demotion(
@@ -1430,15 +1720,18 @@ async def test_last_admin_concurrent_mixed_deactivation_and_demotion(
             ),
         )
         statuses = [response.status_code for response in results]
-        print(f"mixed iteration {iteration + 1}: {statuses}")
 
-        assert all(status < 500 for status in statuses), (
-            f"Iteration {iteration}: server error (statuses: {statuses})"
-        )
+        assert all(
+            status < 500 for status in statuses
+        ), f"Iteration {iteration}: server error (statuses: {statuses})"
         for response in results:
-            assert response.status_code in (200, 400, 401, 403, 409), (
-                f"Iteration {iteration}: unexpected status {response.status_code}"
-            )
+            assert response.status_code in (
+                200,
+                400,
+                401,
+                403,
+                409,
+            ), f"Iteration {iteration}: unexpected status {response.status_code}"
             if response.status_code == 409:
                 assert response.json()["code"] == "LAST_ADMIN_PROTECTED", response.text
 

@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     sensors,
     users,
 )
+from app.api.v1.endpoints.auth import me as me_handler
 
 router = APIRouter()
 router.include_router(health.health_router)
@@ -35,6 +36,4 @@ router.include_router(audit.audit_router)
 
 # TRD contract: /api/v1/me is the canonical path; /auth/me kept as an alias for
 # backwards compatibility. Both resolve to the same handler.
-from app.api.v1.endpoints.auth import me as me_handler
-
 router.add_api_route("/me", me_handler, methods=["GET"], include_in_schema=False)

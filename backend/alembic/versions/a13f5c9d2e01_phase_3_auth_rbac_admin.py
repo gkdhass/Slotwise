@@ -135,8 +135,12 @@ def upgrade() -> None:
         sa.Column("user_agent", sa.String(length=512), nullable=True),
         sa.Column("ip_address", postgresql.INET(), nullable=True),
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.CheckConstraint("token_hash ~ '^[0-9a-f]{64}$'", name=op.f("ck_refresh_tokens_token_hash_sha256")),
-        sa.CheckConstraint("expires_at > issued_at", name=op.f("ck_refresh_tokens_expires_after_issue")),
+        sa.CheckConstraint(
+            "token_hash ~ '^[0-9a-f]{64}$'", name=op.f("ck_refresh_tokens_token_hash_sha256")
+        ),
+        sa.CheckConstraint(
+            "expires_at > issued_at", name=op.f("ck_refresh_tokens_expires_after_issue")
+        ),
         sa.CheckConstraint(
             "used_at IS NULL OR revoked_at IS NULL OR used_at <= revoked_at",
             name=op.f("ck_refresh_tokens_used_before_revoked"),
@@ -160,9 +164,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_refresh_tokens_user_family", "refresh_tokens", ["user_id", "family_id"], unique=False
     )
-    op.create_index(
-        "ux_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True
-    )
+    op.create_index("ux_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True)
 
     # -- response policy versioning -----------------------------------------
     op.drop_constraint("uq_response_policies_name", "response_policies", type_="unique")
@@ -197,7 +199,9 @@ def upgrade() -> None:
         "sensors", sa.Column("credential_rotated_at", sa.DateTime(timezone=True), nullable=True)
     )
     op.add_column("sensors", sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True))
-    op.execute("UPDATE sensors SET revoked_at = now() WHERE status = 'REVOKED' AND revoked_at IS NULL")
+    op.execute(
+        "UPDATE sensors SET revoked_at = now() WHERE status = 'REVOKED' AND revoked_at IS NULL"
+    )
     op.create_check_constraint(
         "credential_prefix_format",
         "sensors",
@@ -240,7 +244,9 @@ def downgrade() -> None:
         "response_policies",
         type_="foreignkey",
     )
-    op.drop_constraint(op.f("ck_response_policies_version_positive"), "response_policies", type_="check")
+    op.drop_constraint(
+        op.f("ck_response_policies_version_positive"), "response_policies", type_="check"
+    )
     op.drop_column("response_policies", "supersedes_id")
     op.drop_column("response_policies", "version")
     op.create_unique_constraint(op.f("uq_response_policies_name"), "response_policies", ["name"])

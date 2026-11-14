@@ -350,12 +350,12 @@ class Settings(BaseSettings):
             insecure.append("MINIO_SECRET_KEY")
         if "change-me" in self.database.url or "slotwise:slotwise@" in self.database.url:
             insecure.append("DATABASE_URL")
-        
+
         # Check for placeholder JWT secret
         jwt_secret = self.security.active_jwt_secret
         if "change-me" in jwt_secret.lower() or jwt_secret == DEV_SECRET_KEY:
             insecure.append("JWT secret (still using placeholder/dev value in production)")
-            
+
         if insecure:
             joined = ", ".join(insecure)
             raise ValueError(
@@ -371,7 +371,7 @@ class Settings(BaseSettings):
                 raise ValueError(f"JWT rotation key {kid!r} is too short outside dev")
         if not self.security.refresh_cookie_secure:
             raise ValueError("SECURITY_REFRESH_COOKIE_SECURE must be true outside dev")
-            
+
         # Require strong admin password outside dev
         if self.seed.admin_password is None:
             raise ValueError("SEED_ADMIN_PASSWORD is required in non-dev environments")
@@ -381,14 +381,17 @@ class Settings(BaseSettings):
                 f"SEED_ADMIN_PASSWORD must meet password complexity requirements "
                 f"(min length {self.security.password_min_length})"
             )
-            
+
         # Require explicit CORS origin allow-list outside dev
-        if not self.app.cors_origins or self.app.cors_origins == ["http://localhost:5173", "https://localhost"]:
+        if not self.app.cors_origins or self.app.cors_origins == [
+            "http://localhost:5173",
+            "https://localhost",
+        ]:
             raise ValueError(
                 "CORS_ALLOWED_ORIGINS must be explicitly set in non-dev environments "
                 "(APP_CORS_ORIGINS environment variable)"
             )
-            
+
         return self
 
     @property
