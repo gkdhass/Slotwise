@@ -7,6 +7,9 @@ SQLAlchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 alembic==1.14.0
 celery[redis]==5.4.0
+# Celery 5.4 allows kombu <6, and kombu 5.6+ refuses redis-py <6.1. Pin the
+# worker stack to the release line that pairs with the app's redis client.
+kombu==5.4.2
 redis==5.2.1
 httpx==0.28.1
 prometheus-client==0.21.1

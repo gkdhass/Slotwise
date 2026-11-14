@@ -79,6 +79,68 @@ async def test_upgrade_downgrade_upgrade_cycle(migrated_database, migration_engi
     assert await _table_names(migration_engine) == EXPECTED_TABLES
 
 
+async def test_downgrade_folds_versioned_policies(migrated_database, migration_engine) -> None:
+    """A committed policy history must not make the Phase 2 downgrade fail.
+
+    Phase 3 keeps one row per ``(name, version)`` and forbids DELETE, so a
+    downgrade has to fold the history itself before restoring the Phase 2
+    ``uq_response_policies_name`` constraint.
+    """
+    import uuid as uuid_module
+
+    name = f"migrator-version-{uuid_module.uuid4().hex[:8]}"
+    async with migration_engine.begin() as connection:
+        first_id = (
+            await connection.execute(
+                text(
+                    "INSERT INTO response_policies "
+                    "(name, version, action_type, requires_approval, conditions, enabled) "
+                    "VALUES (:name, 1, 'BLOCK_IP', true, '{}', true) RETURNING id"
+                ),
+                {"name": name},
+            )
+        ).scalar_one()
+        await connection.execute(
+            text(
+                "INSERT INTO response_policies "
+                "(name, version, action_type, requires_approval, conditions, enabled, "
+                "supersedes_id) "
+                "VALUES (:name, 2, 'ISOLATE_HOST', true, '{}', true, :first_id)"
+            ),
+            {"name": name, "first_id": first_id},
+        )
+
+    # Stop at the Phase 2 revision: downgrading to base would drop the table and
+    # hide whether the fold worked.
+    await asyncio.to_thread(_run_alembic, "downgrade", "7c0f74402c2b")
+    async with migration_engine.connect() as connection:
+        names = (
+            (
+                await connection.execute(
+                    text("SELECT name FROM response_policies WHERE name = :name"),
+                    {"name": name},
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert names == [name]
+
+    await asyncio.to_thread(_run_alembic, "upgrade", "head")
+    async with migration_engine.connect() as connection:
+        versions = (
+            (
+                await connection.execute(
+                    text("SELECT version FROM response_policies WHERE name = :name"),
+                    {"name": name},
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert versions == [1]
+
+
 async def test_migration_head_matches_model_metadata(migrated_database, migration_engine) -> None:
     """The migration must produce exactly the schema the models declare."""
     async with migration_engine.connect() as connection:

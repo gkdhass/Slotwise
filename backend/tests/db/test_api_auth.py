@@ -377,7 +377,7 @@ async def test_redis_outage_fails_closed(api_client: Any, make_user: Any, fake_r
 async def test_ws_ticket_is_single_use_and_ip_bound(
     api_client: Any, make_user: Any, login_headers: Any, fake_redis: Any
 ) -> None:
-    await make_user(email="analyst@example.com", password=PASSWORD)
+    user_id = await make_user(email="analyst@example.com", password=PASSWORD)
     headers = await login_headers(api_client, "analyst@example.com", PASSWORD)
 
     issued = await api_client.post("/api/v1/auth/ws-ticket", headers=headers)
@@ -385,7 +385,10 @@ async def test_ws_ticket_is_single_use_and_ip_bound(
     ticket = issued.json()["ticket"]
     assert issued.json()["expires_in"] == 30
 
+    # A request from another address must not redeem the ticket, and must not
+    # burn it either: the client that owns the address can still use it once.
     assert await consume_ws_ticket(fake_redis, ticket, ip_address="203.0.113.9") is None
+    assert await consume_ws_ticket(fake_redis, ticket, ip_address="127.0.0.1") == user_id
     assert await consume_ws_ticket(fake_redis, ticket, ip_address="127.0.0.1") is None
 
 

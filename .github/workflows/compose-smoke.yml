@@ -57,6 +57,10 @@ jobs:
           curl -kfsS https://localhost/metrics | grep -q "http_requests_total"
           curl -kfsS https://localhost/ | grep -qi "slotwise"
 
+      - name: Dump compose logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml logs --no-color --tail=300
+
       - name: Stop the stack
         if: always()
         run: docker compose -f docker-compose.yml down -v --remove-orphans

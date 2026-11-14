@@ -17,8 +17,11 @@ from app.core.security import hash_token, new_ws_ticket
 _TICKET_PREFIX = "ws:ticket:"
 
 
-def _key(raw: str) -> str:
-    return f"{_TICKET_PREFIX}{hash_token(raw)}"
+def _key(raw: str, ip_address: str) -> str:
+    # The issuing IP is part of the key, so a ticket presented from a different
+    # address simply finds nothing. Using the raw ticket hash alone would mean a
+    # GETDEL from the wrong IP burns the ticket and denies the legitimate client.
+    return f"{_TICKET_PREFIX}{hash_token(f'{raw}|{ip_address}')}"
 
 
 async def issue_ws_ticket(
@@ -26,12 +29,12 @@ async def issue_ws_ticket(
 ) -> str:
     raw, _digest = new_ws_ticket()
     payload = json.dumps({"sub": str(user_id), "ip": ip_address})
-    await redis.set(_key(raw), payload, ex=ttl_seconds)
+    await redis.set(_key(raw, ip_address), payload, ex=ttl_seconds)
     return raw
 
 
 async def consume_ws_ticket(redis: RedisClient, raw: str, *, ip_address: str) -> uuid.UUID | None:
-    stored = await redis.getdel(_key(raw))
+    stored = await redis.getdel(_key(raw, ip_address))
     if not stored:
         return None
     try:

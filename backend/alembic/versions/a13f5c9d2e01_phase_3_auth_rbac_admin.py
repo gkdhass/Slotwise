@@ -244,6 +244,38 @@ def downgrade() -> None:
         "response_policies",
         type_="foreignkey",
     )
+    # Phase 2 only allows one row per policy name, so a downgrade has to fold the
+    # version history that Phase 3 permits. The append-only trigger is already
+    # dropped above; without this each name keeps several versions and the
+    # ``uq_response_policies_name`` restore below fails on real data. Point any
+    # response action at the newest version before dropping the old rows so the
+    # ON DELETE SET NULL foreign key does not silently clear the link.
+    op.execute(
+        """
+        UPDATE response_actions AS action
+        SET policy_id = newest.keep_id
+        FROM response_policies AS versioned
+        JOIN (
+            SELECT name, (array_agg(id ORDER BY version DESC))[1] AS keep_id
+            FROM response_policies
+            GROUP BY name
+        ) AS newest ON newest.name = versioned.name
+        WHERE action.policy_id = versioned.id
+          AND versioned.id <> newest.keep_id
+        """
+    )
+    op.execute(
+        """
+        DELETE FROM response_policies AS versioned
+        USING (
+            SELECT name, (array_agg(id ORDER BY version DESC))[1] AS keep_id
+            FROM response_policies
+            GROUP BY name
+        ) AS newest
+        WHERE versioned.name = newest.name
+          AND versioned.id <> newest.keep_id
+        """
+    )
     op.drop_constraint(
         op.f("ck_response_policies_version_positive"), "response_policies", type_="check"
     )
