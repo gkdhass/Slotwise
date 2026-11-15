@@ -740,6 +740,35 @@ ROUTE_ACCESS_MATRIX: dict[tuple[str, str], dict[str, int]] = {
         "admin": 200,
         "sensor": 401,
     },
+    # Event ingestion and querying - SENSOR for POST, VIEWER+ for GET
+    ("POST", "/api/v1/events"): {
+        "anonymous": 401,
+        "viewer": 422,  # Validation error on empty or invalid batch
+        "analyst": 422,
+        "admin": 422,
+        "sensor": 202,
+    },  # 202 Accepted
+    ("GET", "/api/v1/events"): {
+        "anonymous": 401,
+        "viewer": 200,
+        "analyst": 200,
+        "admin": 200,
+        "sensor": 403,
+    },
+    ("GET", "/api/v1/events/{event_id}"): {
+        "anonymous": 401,
+        "viewer": 404,
+        "analyst": 404,
+        "admin": 404,
+        "sensor": 403,
+    },
+    ("POST", "/api/v1/events/imports"): {
+        "anonymous": 401,
+        "viewer": 501,
+        "analyst": 501,
+        "admin": 501,
+        "sensor": 403,
+    },  # 501 Not Implemented
 }
 
 

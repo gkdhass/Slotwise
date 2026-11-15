@@ -230,6 +230,16 @@ class SecuritySettings(_EnvSettings):
     rate_limit_ticket_per_minute: int = Field(default=30, ge=1, le=10_000)
     rate_limit_sensor_per_minute: int = Field(default=60, ge=1, le=10_000)
 
+    # Event ingestion settings
+    event_max_body_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=100 * 1024 * 1024)
+    event_max_batch_size: int = Field(default=100, ge=1, le=1000)
+    event_future_skew_seconds: int = Field(default=300, ge=0, le=3600)
+    event_max_age_days: int = Field(default=30, ge=1, le=365)
+    event_json_max_depth: int = Field(default=10, ge=1, le=50)
+    event_string_max_length: int = Field(default=10_000, ge=100, le=1_000_000)
+    import_max_file_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1_000 * 1024 * 1024)
+    import_max_rows: int = Field(default=10_000, ge=1, le=100_000)
+
     # ``__Secure-`` (not ``__Host-``): __Host- mandates Path=/ and forbids a
     # Domain attribute, which conflicts with scoping the refresh cookie to the
     # auth path. __Secure- still requires the Secure attribute, so the cookie

@@ -9,7 +9,7 @@ from app.models.assets import Asset, Sensor
 from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.datasets import Dataset, TrainingRun
-from app.models.events import Event, EventLabel
+from app.models.events import Event, EventLabel, EventOutbox
 from app.models.identity import RefreshToken, Role, User
 from app.models.inference import InferenceResult, ModelVersion
 from app.models.responses import AllowlistEntry, ResponseAction, ResponsePolicy
@@ -23,6 +23,7 @@ __all__ = [
     "Dataset",
     "Event",
     "EventLabel",
+    "EventOutbox",
     "Incident",
     "IncidentAlert",
     "IncidentComment",

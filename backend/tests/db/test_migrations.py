@@ -40,6 +40,7 @@ EXPECTED_TABLES = frozenset(
         "audit_logs",
         "datasets",
         "event_labels",
+        "event_outbox",
         "events",
         "incident_alerts",
         "incident_comments",

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+
+# Forward references for relationships
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     CheckConstraint,
@@ -12,6 +14,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     func,
@@ -23,6 +26,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
 from app.models.enums import EventStatus, EventType, SourceType, sql_values
+
+if TYPE_CHECKING:
+    from app.models.assets import Sensor
+    from app.models.identity import User
 
 
 class Event(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -40,6 +47,7 @@ class Event(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
             name="raw_checksum_sha256",
         ),
         CheckConstraint("length(schema_version) > 0", name="schema_version_present"),
+        CheckConstraint("received_via IN ('api', 'import')", name="received_via_allowed"),
         # Ingestion may legitimately omit external_id (e.g. uploads). Only rows
         # that claim a source identity are subject to duplicate protection.
         Index(
@@ -78,10 +86,59 @@ class Event(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     processing_status: Mapped[str] = mapped_column(
         String(24), nullable=False, default=EventStatus.RECEIVED.value
     )
+    status_reason: Mapped[str | None] = mapped_column(String(500))
+    received_via: Mapped[str] = mapped_column(String(20), nullable=False, default="api")
+    sensor_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("sensors.id", ondelete="SET NULL"),
+    )
+    imported_by: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    preprocessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    feature_ref: Mapped[str | None] = mapped_column(String(500))
+    feature_schema_version: Mapped[str | None] = mapped_column(String(16))
+    search_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     labels: Mapped[list[EventLabel]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
     )
+    sensor: Mapped[Sensor | None] = relationship("Sensor")
+    imported_by_user: Mapped[User | None] = relationship("User")
+
+
+class EventOutbox(CreatedAtMixin, Base):
+    __tablename__ = "event_outbox"
+    __table_args__ = (
+        CheckConstraint("attempts >= 0", name="attempts_non_negative"),
+        CheckConstraint("status IN ('PENDING', 'SENT', 'FAILED')", name="status_allowed"),
+        Index(
+            "ix_event_outbox_status_next_attempt_at",
+            "status",
+            "next_attempt_at",
+            postgresql_where=text("status = 'PENDING'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("uuid_generate_v4()"),
+    )
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("events.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    task_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    event: Mapped[Event] = relationship("Event")
 
 
 class EventLabel(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -92,6 +149,7 @@ class EventLabel(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
             "confidence IS NULL OR (confidence >= 0 AND confidence <= 1)",
             name="confidence_range",
         ),
+        CheckConstraint("source IN ('ANALYST', 'ML', 'SENSOR_SUPPLIED')", name="source_allowed"),
         # One label value per event; the source records who supplied it.
         Index("ux_event_labels_event_label", "event_id", "label", unique=True),
         Index("ix_event_labels_label", "label"),

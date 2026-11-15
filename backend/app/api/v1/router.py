@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     assets,
     audit,
     auth,
+    events,
     health,
     policies,
     roles,
@@ -33,6 +34,7 @@ router.include_router(assets.assets_router)
 router.include_router(policies.policies_router)
 router.include_router(allowlist.allowlist_router)
 router.include_router(audit.audit_router)
+router.include_router(events.router)
 
 # TRD contract: /api/v1/me is the canonical path; /auth/me kept as an alias for
 # backwards compatibility. Both resolve to the same handler.

@@ -32,6 +32,7 @@ READ_PERMISSIONS: Final[frozenset[str]] = frozenset(
 ANALYST_PERMISSIONS: Final[frozenset[str]] = READ_PERMISSIONS | frozenset(
     {
         "events:write",
+        "events:import",
         "alerts:update",
         "incidents:write",
         "incidents:comment",

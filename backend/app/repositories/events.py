@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from sqlalchemy import literal_column, select, text, tuple_
@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import InstrumentedAttribute
 
 from app.core.errors import BadRequestError
-from app.models.events import Event, EventLabel
+from app.models.events import Event, EventLabel, EventOutbox
 from app.repositories.base import BaseRepository
 from app.repositories.pagination import (
     Page,
@@ -160,3 +160,30 @@ class EventLabelRepository(BaseRepository[EventLabel]):
         self.session.add(entity)
         await self.session.flush()
         return entity
+
+
+class EventOutboxRepository(BaseRepository[EventOutbox]):
+    model = EventOutbox
+
+    async def create(self, values: Mapping[str, Any]) -> EventOutbox:
+        entity = EventOutbox(**dict(values))
+        self.session.add(entity)
+        await self.session.flush()
+        return entity
+
+    async def get_pending(self, limit: int = 100) -> list[EventOutbox]:
+        from sqlalchemy import and_
+
+        statement = (
+            select(EventOutbox)
+            .where(
+                and_(
+                    EventOutbox.status == "PENDING",
+                    EventOutbox.next_attempt_at <= datetime.now(UTC),
+                )
+            )
+            .order_by(EventOutbox.created_at)
+            .limit(limit)
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())

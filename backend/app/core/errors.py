@@ -76,6 +76,12 @@ class BadRequestError(DomainError):
     default_message = "The request is invalid."
 
 
+class ValidationError(DomainError):
+    code = ErrorCode.VALIDATION_ERROR
+    status_code = 422
+    default_message = "The request failed validation."
+
+
 class UnauthorizedError(DomainError):
     code = ErrorCode.UNAUTHORIZED
     status_code = 401
@@ -110,6 +116,22 @@ class DependencyUnavailableError(DomainError):
     code = ErrorCode.DEPENDENCY_UNAVAILABLE
     status_code = 503
     default_message = "A required dependency is unavailable."
+
+
+class ServiceUnavailableError(DomainError):
+    code = ErrorCode.DEPENDENCY_UNAVAILABLE
+    status_code = 503
+    default_message = "Service is temporarily unavailable."
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        details: Any = None,
+        retry_after: int = 60,
+    ) -> None:
+        headers = {"Retry-After": str(max(1, int(retry_after)))}
+        super().__init__(message, details=details, headers=headers)
 
 
 class ModuleDisabledError(DomainError):

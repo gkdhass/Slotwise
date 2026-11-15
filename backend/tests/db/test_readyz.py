@@ -25,7 +25,7 @@ async def test_readyz_reports_migrations_current(migrated_database) -> None:
 
 
 async def test_expected_heads_come_from_checked_in_scripts(migrated_database) -> None:
-    assert expected_migration_heads() == {"a13f5c9d2e01"}
+    assert expected_migration_heads() == {"b4e7f8c9d3a2"}
 
 
 async def test_readyz_reports_revision_mismatch(
