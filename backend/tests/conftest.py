@@ -20,10 +20,20 @@ from app.main import create_app
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("SECURITY_SECRET_KEY", "test-only-secret-key-0123456789abcdef")
 os.environ.setdefault("MINIO_SECRET_KEY", "test-only-minio-secret")
-os.environ.setdefault(
-    "DATABASE_URL", "postgresql+asyncpg://slotwise:test@localhost:5432/slotwise_test"
+
+# Check for TEST_* env vars first (e.g., from CI/bootstrap), fall back to localhost
+test_db_url = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://slotwise_app:slotwise_app@127.0.0.1:5432/slotwise_test",
 )
-os.environ.setdefault("REDIS_URL", os.getenv("TEST_REDIS_URL", "redis://localhost:6379/0"))
+test_migration_url = os.getenv(
+    "TEST_MIGRATION_URL",
+    "postgresql+asyncpg://slotwise_migrator:slotwise_migrator@127.0.0.1:5432/slotwise_test",
+)
+os.environ.setdefault("DATABASE_URL", test_db_url)
+os.environ.setdefault("DATABASE_MIGRATION_URL", test_migration_url)
+
+os.environ.setdefault("REDIS_URL", os.getenv("TEST_REDIS_URL", "redis://127.0.0.1:6379/0"))
 os.environ.setdefault("OPENSEARCH_URL", "http://localhost:9200")
 os.environ.setdefault("MINIO_ENDPOINT", "http://localhost:9000")
 os.environ.setdefault("MLFLOW_TRACKING_URI", "http://localhost:5000")

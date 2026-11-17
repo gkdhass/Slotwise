@@ -16,6 +16,7 @@ from httpx import ASGITransport
 from app.api.deps import (
     PUBLIC_ROUTES,
     _dependency_calls,
+    get_current_sensor,
     iter_api_routes,
     unprotected_routes,
 )
@@ -77,6 +78,7 @@ def test_admin_routes_declare_permissions(app) -> None:
         "/api/v1/auth/me",
         "/api/v1/me",  # TRD contract: canonical /me path, aliased from /auth/me
         "/api/v1/sensors/heartbeat",
+        "/api/v1/events",
         "/api/v1/healthz",
         "/api/v1/readyz",
         "/healthz",
@@ -120,6 +122,20 @@ def test_expected_permission_matrix(app) -> None:
         assert actual.get(key) == permissions, key
 
 
+def test_post_events_retains_sensor_dependency(app) -> None:
+    """POST /events must depend on the shared sensor authenticator."""
+    target = None
+    for route in iter_api_routes(app.routes):
+        if route.path == "/api/v1/events" and "POST" in (route.methods or ()):
+            target = route
+            break
+    assert target is not None, "POST /api/v1/events route is missing"
+    calls = _dependency_calls(target.dependant)
+    assert (
+        get_current_sensor in calls
+    ), "POST /api/v1/events lost its sensor dependency (get_current_sensor)"
+
+
 async def test_anonymous_request_is_rejected_everywhere_protected(app) -> None:
     """No protected handler logic can run without a principal."""
     transport = ASGITransport(app=app, raise_app_exceptions=False)
@@ -130,6 +146,7 @@ async def test_anonymous_request_is_rejected_everywhere_protected(app) -> None:
                     continue
                 response = await client.request(method, _concrete_path(route.path))
                 assert response.status_code in {
+                    400,
                     401,
                     403,
                 }, f"{method} {route.path} returned {response.status_code}: {response.text}"
@@ -140,4 +157,5 @@ async def test_anonymous_request_is_rejected_everywhere_protected(app) -> None:
                     "AUTH_INVALID_CREDENTIALS",
                     "FORBIDDEN",
                     "AUTH_ACCOUNT_LOCKED",
+                    "NO_SENSOR_KEY",
                 }

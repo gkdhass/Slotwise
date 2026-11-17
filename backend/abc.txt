@@ -1,0 +1,56 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.18, pytest-9.0.3, pluggy-1.7.0 -- C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend
+configfile: pyproject.toml
+plugins: anyio-4.16.0, platformdirs-4.14.5, asyncio-1.4.1.post1, cov-6.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/db/test_events_behaviour.py::test_post_event_creates_event_outbox_and_archive PASSED [ 33%]
+tests/db/test_events_behaviour.py::test_duplicate_returns_200_original_id_and_no_new_rows PASSED [ 66%]
+tests/db/test_events_behaviour.py::test_20_concurrent_identical_submissions_one_event FAILED [100%]
+
+================================== FAILURES ===================================
+_____________ test_20_concurrent_identical_submissions_one_event ______________
+
+race_api_client = <httpx.AsyncClient object at 0x0000019ADF9F15D0>
+race_session_factory = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0x0000019ADEBD3B00>, autoflush=True, expire_on_commit=False)
+
+    @pytest.mark.db
+    async def test_20_concurrent_identical_submissions_one_event(
+        race_api_client: AsyncClient, race_session_factory: Any
+    ) -> None:
+        """20 concurrent identical submissions (own connections each) result in exactly one event and outbox."""
+        sensor_key = await get_sensor_key()
+    
+        # Count initial rows via race session
+        async with race_session_factory() as session:
+            initial_events = await session.scalar(select(func.count(Event.id)))
+            initial_outbox = await session.scalar(select(func.count(EventOutbox.id)))
+    
+        initial_counts = (initial_events or 0, None, initial_outbox or 0)
+    
+        envelope = valid_zeek_event()
+        envelope["external_id"] = "evt-c-conc"
+    
+        async def submit() -> tuple[int, bool]:
+            response = await race_api_client.post(
+                "/api/v1/events",
+                headers={"X-Sensor-Key": sensor_key},
+                json=envelope,
+            )
+            return response.status_code, response.json().get("duplicate", False)
+    
+        results = await asyncio.gather(*[submit() for _ in range(20)])
+    
+        status_202_count = sum(1 for status, _ in results if status == 202)
+        status_200_count = sum(1 for status, _ in results if status == 200)
+>       assert status_202_count + status_200_count == 20, f"all requests succeeded: {results}"
+E       AssertionError: all requests succeeded: [(200, True), (500, False), (500, False), (500, False), (200, True), (200, True), (200, True), (200, True), (200, True), (200, True), (500, False), (200, True), (202, False), (200, True), (200, True), (500, False), (200, True), (500, False), (200, True), (200, True)]
+E       assert (1 + 13) == 20
+
+tests\db\test_events_behaviour.py:207: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/db/test_events_behaviour.py::test_20_concurrent_identical_submissions_one_event
+========================= 1 failed, 2 passed in 1.93s =========================

@@ -148,17 +148,39 @@ async def api_client(app: Any, settings: Any, api_session_factory: Any, fake_red
         async with api_session_factory() as session:
             yield session
 
+    # Mock storage service for tests - tracks objects for verification
+    _stored_objects: dict[str, bytes] = {}
+
+    class MockStorageService:
+        async def put_object(self, key: str, data: bytes, content_type: str) -> None:
+            _stored_objects[key] = data
+
+        async def get_object(self, key: str) -> bytes | None:
+            return _stored_objects.get(key)
+
+    # Attach the tracking dict to app for test access
+    app.storage_objects = _stored_objects
+
     app.dependency_overrides[get_db_session] = _session_override
     app.dependency_overrides[get_redis_client] = lambda: fake_redis
     app.dependency_overrides[get_settings] = lambda: settings
 
+    # Override the storage service dependency
+    # This is imported lazily to ensure the module is loaded
+    from app.api.v1.endpoints.events import get_storage_service
+
+    app.dependency_overrides[get_storage_service] = lambda: MockStorageService()
+
     # https so the Secure refresh cookie is stored and replayed by the client,
     # exactly as a browser would over TLS.
-    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    transport = ASGITransport(app=app, raise_app_exceptions=True)
     async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
         yield client
 
     app.dependency_overrides.clear()
+
+
+CSRF_HEADERS = {"X-Requested-With": "slotwise-dashboard"}
 
 
 @pytest.fixture
@@ -197,7 +219,25 @@ def make_user(api_session_factory: Any, settings: Any) -> Any:
     return _make
 
 
-CSRF_HEADERS = {"X-Requested-With": "slotwise-dashboard"}
+@pytest.fixture
+async def count_rows_func(migration_engine: AsyncEngine) -> Any:
+    """Fixture that provides count_rows with access to migrator engine."""
+
+    async def _count():
+        # Import here to avoid circular imports
+        from sqlalchemy import func, select
+
+        from app.models.events import Event, EventLabel, EventOutbox
+
+        # Count events and labels via app session (would need api_session_factory)
+        # For now, use migrator connection for all counts
+        async with migration_engine.connect() as conn:
+            events = await conn.scalar(select(func.count(Event.id)))
+            labels = await conn.scalar(select(func.count(EventLabel.id)))
+            outbox = await conn.scalar(select(func.count(EventOutbox.id)))
+        return (events or 0, labels or 0, outbox or 0)
+
+    return _count
 
 
 @pytest.fixture

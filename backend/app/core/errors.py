@@ -53,7 +53,7 @@ class ErrorCode(str, Enum):
 class DomainError(Exception):
     """Base class for expected, typed application failures."""
 
-    code: ErrorCode = ErrorCode.INTERNAL_ERROR
+    code: str = ErrorCode.INTERNAL_ERROR
     status_code: int = 500
     default_message = "An unexpected error occurred."
 
@@ -61,10 +61,13 @@ class DomainError(Exception):
         self,
         message: str | None = None,
         *,
+        code: ErrorCode | str | None = None,
         details: Any = None,
         headers: dict[str, str] | None = None,
     ) -> None:
         self.message = message or self.default_message
+        if code is not None:
+            self.code = code.value if isinstance(code, ErrorCode) else code
         self.details = details
         self.headers = headers
         super().__init__(self.message)
@@ -270,14 +273,14 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
     logger.warning(
         "domain_error",
         extra={
-            "error_code": exc.code.value,
+            "error_code": exc.code.value if isinstance(exc.code, ErrorCode) else exc.code,
             "status_code": exc.status_code,
             "path": request.url.path,
         },
     )
     return build_error_response(
         status_code=exc.status_code,
-        code=exc.code,
+        code=exc.code.value if isinstance(exc.code, ErrorCode) else exc.code,
         message=exc.message,
         details=exc.details,
         request_id=request_id,

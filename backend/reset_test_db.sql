@@ -1,0 +1,2 @@
+DROP DATABASE IF EXISTS slotwise_test WITH (FORCE);
+CREATE DATABASE slotwise_test;

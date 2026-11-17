@@ -72,6 +72,8 @@ def test_non_dev_rejects_placeholder_database_password(monkeypatch: pytest.Monke
     monkeypatch.setenv("SECURITY_SECRET_KEY", STRONG_SECRET)
     monkeypatch.setenv("MINIO_SECRET_KEY", STRONG_MINIO_SECRET)
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://slotwise:change-me@db:5432/slotwise")
+    monkeypatch.setenv("SEED_ADMIN_PASSWORD", "Strong-Admin-Password-For-Production-2026!")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://prod.example.com")
     with pytest.raises(ValidationError) as exc_info:
         Settings()
     assert "DATABASE_URL" in str(exc_info.value)
@@ -99,6 +101,8 @@ def test_blank_secret_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_database_url_must_use_async_driver(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_MIGRATION_URL", raising=False)
     monkeypatch.setenv("DATABASE_URL", "postgresql://slotwise:test@db:5432/slotwise")
     with pytest.raises(ValidationError):
         Settings()

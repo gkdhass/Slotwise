@@ -73,6 +73,7 @@ ignore = ["B008"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S603", "ARG001", "ARG002", "PT011", "PT018"]
 "app/cli/**" = ["T201"]
+"grant_app_permissions.py" = ["S608", "T201"]
 "alembic/**" = ["E501", "I001", "UP"]
 
 [tool.ruff.lint.isort]

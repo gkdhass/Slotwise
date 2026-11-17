@@ -5,12 +5,12 @@ Revises: a13f5c9d2e01
 Create Date: 2026-11-14 10:00:00.000000
 
 Additive only: event_outbox table, event status columns, sensor FK, import metadata.
-Re-apply least-privilege grants. Migration is reversible.
+Schema changes only; privileges managed separately in grant_app_permissions.py.
+Migration is reversible.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -21,46 +21,6 @@ revision: str = "b4e7f8c9d3a2"
 down_revision: str | None = "a13f5c9d2e01"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
-
-_ROLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-
-
-def _app_role() -> str:
-    role = op.get_context().config.get_main_option("app_db_role", "slotwise_app")
-    if not _ROLE_NAME.fullmatch(role):
-        raise ValueError("DATABASE_APP_ROLE contains unsafe characters")
-    return role
-
-
-def _grant_application_role() -> None:
-    role = _app_role()
-    op.execute(
-        f"""
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role}') THEN
-                -- Revoke all first to clear accumulated privileges
-                REVOKE ALL ON ALL TABLES IN SCHEMA public FROM {role};
-                REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM {role};
-                -- Now grant clean set: schema access
-                GRANT USAGE ON SCHEMA public TO {role};
-                -- audit_logs: append-only, INSERT + SELECT only
-                GRANT SELECT, INSERT ON audit_logs TO {role};
-                -- All other tables: SELECT, INSERT, UPDATE, DELETE (changed on trigger/constraint)
-                GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role};
-                -- sequences
-                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role};
-                -- alembic version table readonly
-                GRANT SELECT ON alembic_version TO {role};
-                -- Revoke the all-tables grants from audit_logs specifically
-                REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM {role};
-                -- Revoke TRUNCATE from all tables
-                REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM {role};
-            END IF;
-        END
-        $$;
-        """
-    )
 
 
 def upgrade() -> None:
@@ -160,19 +120,16 @@ def upgrade() -> None:
 
     # Add CHECK constraint for received_via
     op.execute("""
-        ALTER TABLE events 
-        ADD CONSTRAINT ck_events_received_via_allowed 
+        ALTER TABLE events
+        ADD CONSTRAINT ck_events_received_via_allowed
         CHECK (received_via IN ('api', 'import'))
     """)
-
-    # Re-apply least-privilege grants
-    _grant_application_role()
 
 
 def downgrade() -> None:
     # Remove CHECK constraints using raw SQL
     op.execute("""
-        ALTER TABLE events 
+        ALTER TABLE events
         DROP CONSTRAINT IF EXISTS ck_events_received_via_allowed
     """)
 
@@ -193,6 +150,3 @@ def downgrade() -> None:
     # Drop event_outbox table
     op.drop_index("ix_event_outbox_status_next_attempt_at", table_name="event_outbox")
     op.drop_table("event_outbox")
-
-    # Re-apply least-privilege grants
-    _grant_application_role()

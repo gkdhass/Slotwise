@@ -1,0 +1,24 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.18, pytest-9.0.3, pluggy-1.7.0 -- C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend
+configfile: pyproject.toml
+plugins: anyio-4.16.0, platformdirs-4.14.5, asyncio-1.4.1.post1, cov-6.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+tests/db/test_events_behaviour.py::test_post_event_creates_event_outbox_and_archive FAILED
+
+================================== FAILURES ===================================
+______________ test_post_event_creates_event_outbox_and_archive _______________
+tests\db\test_events_behaviour.py:119: in test_post_event_creates_event_outbox_and_archive
+    assert response.status_code == 202, f"Expected 202, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 202, got 500: {"code":"INTERNAL_ERROR","message":"An unexpected error occurred.","details":null,"request_id":"e0c43943814d4c8eb49bbe683abe5fe0"}
+E   assert 500 == 202
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+=========================== short test summary info ===========================
+FAILED tests/db/test_events_behaviour.py::test_post_event_creates_event_outbox_and_archive
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+============================== 1 failed in 1.25s ==============================

@@ -1,110 +1,106 @@
-"""Grant DML-only permissions to slotwise_app role for test database.
+#!/usr/bin/env python
+"""Grant application role DML permissions after schema migration.
 
-For tests to pass, slotwise_app needs:
-- DML (SELECT/INSERT/UPDATE/DELETE) on operational tables
-- INSERT-only on audit_logs (enforced by DB triggers for UPDATE/DELETE/TRUNCATE)
-- NO DDL privileges
-- NO ownership
+Runs after alembic upgrade head. Applies least-privilege grants:
+- DML on all operational tables (including event_outbox)
+- SELECT, INSERT only on audit_logs (append-only, no UPDATE/DELETE/TRUNCATE)
+- No ALTER DEFAULT PRIVILEGES
+
+Usage:
+    python grant_app_permissions.py
 """
 
 import asyncio
-import logging
 import os
+import re
 
 import asyncpg
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-
-async def main():
-    # Connect as postgres superuser
-    conn = await asyncpg.connect(
-        host="localhost",
-        port=5432,
-        user="postgres",
-        password=os.environ.get("PGPASSWORD", "postgres"),
-        database="slotwise_test",
+async def grant_permissions():
+    """Grant minimal DML privileges to slotwise_app role."""
+    # Read database URL from environment
+    db_url = os.environ.get(
+        "TEST_MIGRATION_URL",
+        "postgresql+asyncpg://slotwise_migrator:slotwise_migrator@127.0.0.1:5432/slotwise_test",
     )
+    # Parse connection string
+    if db_url.startswith("postgresql+asyncpg://"):
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
 
     try:
-        # Grant USAGE on schema
-        await conn.execute("GRANT USAGE ON SCHEMA public TO slotwise_app")
+        conn = await asyncpg.connect(db_url)
 
-        # Grant DML on all tables (SELECT, INSERT, UPDATE, DELETE)
-        await conn.execute("""
-            GRANT SELECT, INSERT, UPDATE, DELETE
-            ON ALL TABLES IN SCHEMA public
-            TO slotwise_app
-        """)
+        # Validate role name
+        app_role = "slotwise_app"
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", app_role):
+            raise ValueError(f"Invalid role name: {app_role}")
 
-        # REVOKE UPDATE, DELETE, TRUNCATE on audit_logs specifically
-        # (INSERT is allowed for audit writing, but mutations are blocked)
-        await conn.execute("""
-            REVOKE UPDATE, DELETE, TRUNCATE
-            ON audit_logs
-            FROM slotwise_app
-        """)
+        # Execute grants
+        # Role name validated above via regex, SQL injection risk mitigated
+        sql_template = (
+            f"""
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{app_role}') THEN
+                    -- REVOKE all first to clear any accumulated privileges
+                    REVOKE ALL ON ALL TABLES IN SCHEMA public FROM {app_role};
+                    REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM {app_role};
 
-        # Grant USAGE and SELECT on all sequences (needed for SERIAL/BIGSERIAL columns)
-        await conn.execute("""
-            GRANT USAGE, SELECT
-            ON ALL SEQUENCES IN SCHEMA public
-            TO slotwise_app
-        """)
+                    -- Schema usage
+                    GRANT USAGE ON SCHEMA public TO {app_role};
 
-        # Set default privileges for future tables created by slotwise_migrator
-        await conn.execute("""
-            ALTER DEFAULT PRIVILEGES FOR ROLE slotwise_migrator IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO slotwise_app
-        """)
+                    -- DML on operational tables: SELECT, INSERT, UPDATE, DELETE
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public
+                      TO {app_role};
 
-        await conn.execute("""
-            ALTER DEFAULT PRIVILEGES FOR ROLE slotwise_migrator IN SCHEMA public
-            GRANT USAGE, SELECT ON SEQUENCES TO slotwise_app
-        """)
+                    -- Sequences for ID generation
+                    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {app_role};
 
-        # Verify permissions on operational table
-        result = await conn.fetch("""
-            SELECT has_table_privilege('slotwise_app', 'roles', 'SELECT') as can_select,
-                   has_table_privilege('slotwise_app', 'roles', 'INSERT') as can_insert,
-                   has_table_privilege('slotwise_app', 'roles', 'UPDATE') as can_update,
-                   has_table_privilege('slotwise_app', 'roles', 'DELETE') as can_delete,
-                   has_table_privilege('slotwise_app', 'roles', 'TRUNCATE') as can_truncate,
-                   has_table_privilege('slotwise_app', 'roles', 'REFERENCES') as can_references,
-                   has_table_privilege('slotwise_app', 'roles', 'TRIGGER') as can_trigger
-        """)
-        perms = dict(result[0])
-        logger.info("slotwise_app permissions on roles table:")
-        logger.info(
-            f"  DML: SELECT={perms['can_select']}, INSERT={perms['can_insert']}, "
-            f"UPDATE={perms['can_update']}, DELETE={perms['can_delete']}"
+                    -- audit_logs: override to INSERT, SELECT ONLY
+                    REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM {app_role};
+
+                    -- alembic_version: read-only
+                    GRANT SELECT ON alembic_version TO {app_role};
+
+                    -- Revoke TRUNCATE from all tables
+                    REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM {app_role};
+                END IF;
+            END
+            $$;
+            """
         )
-        logger.info(
-            f"  DDL-like: TRUNCATE={perms['can_truncate']}, "
-            f"REFERENCES={perms['can_references']}, TRIGGER={perms['can_trigger']}"
+        await conn.execute(sql_template)
+
+        print(f"✓ Privileges granted to {app_role}")
+
+        # Verify audit_logs privileges
+        result = await conn.fetch(
+            """
+            SELECT privilege_type
+            FROM information_schema.role_table_grants
+            WHERE table_name = 'audit_logs'
+            AND grantee = $1
+            ORDER BY privilege_type
+            """,
+            app_role,
         )
+        privs = [row[0] for row in result]
+        print(f"  audit_logs privileges for {app_role}: {privs}")
+        if set(privs) == {"INSERT", "SELECT"}:
+            print("  ✓ audit_logs correctly restricted to INSERT, SELECT only")
+        else:
+            print(f"  ✗ ERROR: Expected only INSERT, SELECT; got {privs}")
+            return False
 
-        # Verify permissions on audit_logs
-        audit_result = await conn.fetch("""
-            SELECT has_table_privilege('slotwise_app', 'audit_logs', 'INSERT') as can_insert,
-                   has_table_privilege('slotwise_app', 'audit_logs', 'UPDATE') as can_update,
-                   has_table_privilege('slotwise_app', 'audit_logs', 'DELETE') as can_delete,
-                   has_table_privilege('slotwise_app', 'audit_logs', 'TRUNCATE') as can_truncate
-        """)
-        audit_perms = dict(audit_result[0])
-        logger.info("\nslotwise_app permissions on audit_logs table:")
-        logger.info(
-            f"  INSERT={audit_perms['can_insert']}, UPDATE={audit_perms['can_update']}, "
-            f"DELETE={audit_perms['can_delete']}, TRUNCATE={audit_perms['can_truncate']}"
-        )
-        logger.info("  (DB triggers will block UPDATE/DELETE/TRUNCATE even if granted)")
-
-        logger.info("\n✓ Successfully granted DML-only permissions to slotwise_app")
-
-    finally:
         await conn.close()
+        return True
+
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    success = asyncio.run(grant_permissions())
+    exit(0 if success else 1)

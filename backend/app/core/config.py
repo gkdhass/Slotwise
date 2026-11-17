@@ -82,7 +82,7 @@ class DatabaseSettings(_EnvSettings):
         case_sensitive=False,
     )
 
-    url: str = "postgresql+asyncpg://slotwise:change-me@postgres:5432/slotwise"
+    url: str = "postgresql+asyncpg://slotwise:change-me@127.0.0.1:5432/slotwise"
     # Alembic uses a DDL-capable role; the API/worker use the least-privilege
     # application role in ``url``. When omitted, migrations reuse ``url``
     # (convenient for a single-role local cluster).

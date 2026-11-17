@@ -1,0 +1,23 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.18, pytest-9.0.3, pluggy-1.7.0 -- C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Mohan\AppData\Local\Temp\opencode\slotwise\backend
+configfile: pyproject.toml
+plugins: anyio-4.16.0, platformdirs-4.14.5, asyncio-1.4.1.post1, cov-6.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/db/test_events_behaviour.py::test_post_event_creates_event_outbox_and_archive PASSED [  8%]
+tests/db/test_events_behaviour.py::test_duplicate_returns_200_original_id_and_no_new_rows PASSED [ 16%]
+tests/db/test_events_behaviour.py::test_20_concurrent_identical_submissions_one_event PASSED [ 25%]
+tests/db/test_events_behaviour.py::test_s3_down_returns_503_and_persists_nothing PASSED [ 33%]
+tests/db/test_events_behaviour.py::test_outbox_insert_failure_rolls_back_event PASSED [ 41%]
+tests/db/test_events_behaviour.py::test_jwt_rejected_on_post_events PASSED [ 50%]
+tests/db/test_events_behaviour.py::test_sensor_cannot_submit_as_another_source_id PASSED [ 58%]
+tests/db/test_events_behaviour.py::test_validation_errors_tenant_id_rejected PASSED [ 66%]
+tests/db/test_events_behaviour.py::test_validation_errors_client_event_id_rejected PASSED [ 75%]
+tests/db/test_events_behaviour.py::test_validation_errors_invalid_schema_version PASSED [ 83%]
+tests/db/test_events_behaviour.py::test_imports_endpoint_accepts_csv PASSED [ 91%]
+tests/db/test_events_behaviour.py::test_permissions_events_import_analyst_only PASSED [100%]
+
+============================= 12 passed in 3.94s ==============================
