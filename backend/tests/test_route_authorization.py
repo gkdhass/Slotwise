@@ -113,6 +113,7 @@ def test_expected_permission_matrix(app) -> None:
         ("GET", "/api/v1/allowlist"): {"allowlist:write"},
         ("DELETE", "/api/v1/allowlist/{entry_id}"): {"allowlist:write"},
         ("GET", "/api/v1/audit-logs"): {"audit:read"},
+        ("GET", "/api/v1/events/{event_id}/raw"): {"events:read_raw"},
     }
     actual: dict[tuple[str, str], set[str]] = {}
     for route in iter_api_routes(app.routes):

@@ -748,6 +748,14 @@ ROUTE_ACCESS_MATRIX: dict[tuple[str, str], dict[str, int]] = {
         "admin": 401,
         "sensor": 202,
     },
+    # Event raw URL - Analyst and Admin only (GET /events/{event_id}/raw)
+    ("GET", "/api/v1/events/{event_id}/raw"): {
+        "anonymous": 401,
+        "viewer": 403,
+        "analyst": 404,
+        "admin": 404,
+        "sensor": 401,
+    },
     # Event import - ANALYST and ADMIN only (POST /events/imports)
     ("POST", "/api/v1/events/imports"): {
         "anonymous": 401,
@@ -815,6 +823,7 @@ async def test_principal_route_access_matrix_complete_and_enforced(
         test_path = test_path.replace("{asset_id}", "00000000-0000-0000-0000-000000000003")
         test_path = test_path.replace("{policy_id}", "00000000-0000-0000-0000-000000000004")
         test_path = test_path.replace("{entry_id}", "00000000-0000-0000-0000-000000000005")
+        test_path = test_path.replace("{event_id}", "00000000-0000-0000-0000-000000000006")
         test_path = test_path.replace("{name}", "test-policy")
 
         # Test each principal type

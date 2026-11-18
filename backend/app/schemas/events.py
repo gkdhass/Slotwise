@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
+import unicodedata
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Annotated, Any, Literal
@@ -53,6 +54,7 @@ class NetworkFlowPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -98,6 +100,7 @@ class EndpointLogPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -149,6 +152,7 @@ class PhishingItemPayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -192,6 +196,7 @@ class ImageFramePayload(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -216,6 +221,7 @@ class EventLabel(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -239,6 +245,7 @@ class EventEnvelope(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         strict=True,
+        allow_inf_nan=False,
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -321,6 +328,29 @@ class EventEnvelope(BaseModel):
         settings = get_settings()
         if self.event_type == EventType.IMAGE_FRAME and not settings.features.module_b_enabled:
             raise ValueError("image_frame events are disabled (MODULE_B_ENABLED=false)")
+        return self
+
+    @model_validator(mode="after")
+    def reject_control_characters(self) -> EventEnvelope:
+        """Reject unicode control/format characters in any string field."""
+
+        def _check(obj: Any) -> None:
+            if isinstance(obj, str):
+                for ch in obj:
+                    if unicodedata.category(ch).startswith("C"):
+                        raise ValueError("Control characters are not allowed")
+            elif isinstance(obj, dict):
+                for key, value in obj.items():
+                    _check(key)
+                    _check(value)
+            elif isinstance(obj, list | tuple | set):
+                for item in obj:
+                    _check(item)
+            elif hasattr(obj, "__dict__"):
+                for value in obj.__dict__.values():
+                    _check(value)
+
+        _check(self)
         return self
 
     def canonical_bytes(self) -> bytes:

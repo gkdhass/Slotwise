@@ -158,6 +158,14 @@ async def api_client(app: Any, settings: Any, api_session_factory: Any, fake_red
         async def get_object(self, key: str) -> bytes | None:
             return _stored_objects.get(key)
 
+        async def generate_presigned_url(self, key: str, expires_in: int = 300) -> str:
+            return (
+                "http://localhost:9000/test-bucket/"
+                + key
+                + "?token=fake-token&expires="
+                + str(expires_in)
+            )
+
     # Attach the tracking dict to app for test access
     app.storage_objects = _stored_objects
 

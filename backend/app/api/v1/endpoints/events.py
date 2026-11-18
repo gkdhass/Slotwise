@@ -29,10 +29,11 @@ from app.api.deps import (
     Principal,
     SessionDep,
     SettingsDep,
+    client_ip,
     get_current_sensor,
     require_permission,
 )
-from app.core.errors import BadRequestError, ServiceUnavailableError
+from app.core.errors import BadRequestError, NotFoundError, ServiceUnavailableError
 from app.core.upload_scanner import DefaultUploadScanner, UploadRejectedError, UploadScanner
 from app.models.enums import EventStatus, EventType, SourceType
 from app.models.events import Event
@@ -171,6 +172,49 @@ async def post_event(
             "event_id": str(event.id),
             "duplicate": False,
         },
+    )
+
+
+@router.get(
+    "/events/{event_id}/raw",
+    responses={
+        200: {"description": "Signed URL for raw event"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
+async def get_event_raw(
+    event_id: uuid.UUID,
+    principal: Annotated[Principal, Depends(require_permission("events:read_raw"))],
+    session: SessionDep,
+    request: Request,
+    storage: Annotated[StorageService, Depends(get_storage_service)],
+) -> JSONResponse:
+    """Return a short-lived signed URL for the raw event payload."""
+    from app.repositories.audit import AuditRepository
+    from app.repositories.events import EventRepository
+
+    event = await EventRepository(session).get(event_id)
+    if event is None:
+        raise NotFoundError("Event not found.")
+
+    expires_in = 300
+    url = await storage.generate_presigned_url(event.raw_ref, expires_in=expires_in)
+
+    await AuditRepository(session).record(
+        actor_id=principal.user_id,
+        action="EVENT_RAW_ACCESSED",
+        entity_type="event",
+        entity_id=event.id,
+        after={"expires_in": expires_in},
+        ip_address=client_ip(request),
+    )
+    await session.commit()
+
+    return JSONResponse(
+        status_code=200,
+        content={"url": url, "expires_in": expires_in},
     )
 
 
